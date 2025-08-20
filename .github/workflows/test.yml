@@ -23,6 +23,7 @@ jobs:
 
     - name: Build Python module
       run: |
+        which nimble
         nimble buildPythonModule
 
     - name: Install pytest
