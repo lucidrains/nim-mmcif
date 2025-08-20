@@ -30,6 +30,10 @@ jobs:
           nim-version: "stable"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       
+      - name: Add Nimble Path
+        run: |
+          echo "$(dirname $(which nim))" >> $GITHUB_PATH
+
       - name: Install Nim dependencies
         run: nimble install -d
 
