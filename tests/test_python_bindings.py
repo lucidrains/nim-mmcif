@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from nim_mmcif_wrapper import get_atom_count, get_atom_positions, get_atoms, parse_mmcif
+from nim_mmcif import get_atom_count, get_atom_positions, get_atoms, parse_mmcif
 
 
 class TestMmcifParser:
