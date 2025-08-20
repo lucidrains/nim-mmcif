@@ -21,6 +21,10 @@ jobs:
       run: |
         nimble install
 
+    - name: Build Python module
+      run: |
+        nimble buildPythonModule
+
     - name: Test
       run: |
         nimble test
