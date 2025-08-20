@@ -26,6 +26,11 @@ jobs:
         with:
           nim-version: "stable"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Add Nimble Path
+        run: |
+          echo "$(dirname $(which nim))" >> $GITHUB_PATH
+          echo $PATH
 
       - name: Install Nim dependencies
         run: nimble install -d
@@ -46,7 +51,7 @@ jobs:
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: "auditwheel repair -w {dest_dir} {wheel}"
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-wheel -w {dest_dir} {wheel}"
           CIBW_BEFORE_BUILD: "nimble buildPythonModule"
-          CIBW_ENVIRONMENT: 'PATH="$PATH:$(dirname $(which nim))"'
+          CIBW_ENVIRONMENT: 'PATH="$PATH"'
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
