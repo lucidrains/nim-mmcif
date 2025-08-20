@@ -70,7 +70,7 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            nim c --app:lib --out:python_bindings.dll src/python_bindings.nim
+            nim c --app:lib --dynlibOverride:python3 --passL:"-static-libgcc -static-libstdc++" --out:python_bindings.dll src/python_bindings.nim
           else
             nim c --app:lib --out:python_bindings.so src/python_bindings.nim
           fi

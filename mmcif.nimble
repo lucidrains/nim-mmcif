@@ -15,6 +15,6 @@ requires "nimpy >= 0.2.1"
 
 task buildPythonModule, "Build Python module":
   when defined(windows):
-    exec "nim c --app:lib --out:src/nim_mmcif.dll src/python_bindings.nim"
+    exec "nim c --app:lib --dynlibOverride:python3 --passL:\"-static-libgcc -static-libstdc++\" --out:python_bindings.pyd src/python_bindings.nim"
   else:
-    exec "nim c --app:lib --out:src/nim_mmcif.so src/python_bindings.nim"
+    exec "nim c --app:lib --out:python_bindings.so src/python_bindings.nim"
