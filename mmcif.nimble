@@ -14,4 +14,7 @@ requires "nimpy"
 # Tasks
 
 task buildPythonModule, "Build Python module":
-  exec "nim c --app:lib --out:nim_mmcif.so src/python_bindings.nim"
+  when defined(windows):
+    exec "nim c --app:lib --out:nim_mmcif.dll src/python_bindings.nim"
+  else:
+    exec "nim c --app:lib --out:nim_mmcif.so src/python_bindings.nim"

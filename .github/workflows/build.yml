@@ -75,7 +75,7 @@ jobs:
           if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
             mv nim_mmcif.so nim_mmcif${{ matrix.python-ext }}
           elif [[ "${{ matrix.os }}" == "macos"* ]]; then
-            mv nim_mmcif.dylib nim_mmcif${{ matrix.python-ext }}
+            mv nim_mmcif.so nim_mmcif${{ matrix.python-ext }}
           elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             mv nim_mmcif.dll nim_mmcif${{ matrix.python-ext }}
           fi
