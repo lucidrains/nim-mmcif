@@ -2,7 +2,7 @@ import unittest
 import mmcif
 
 test "can parse mmcif file":
-  let parsed = mmcif_parse("./test.mmcif")
+  let parsed = mmcif_parse("tests/test.mmcif")
 
   test "parses the correct number of atoms":
     check parsed.atoms.len == 7
