@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -11,28 +11,40 @@ license = {text = "MIT"}
 authors = [
     {name = "lucidrains", email = "lucidrains@gmail.com"}
 ]
-requires-python = ">=3.8"
-dependencies = [
-    "nimporter"
+maintainers = [
+    {name = "lucidrains", email = "lucidrains@gmail.com"}
 ]
+requires-python = ">=3.8"
+dependencies = []
 
 keywords = [
-    "mmcif", "protein", "structure", "bioinformatics", 
-    "parser", "crystallography", "nim"
+    "mmcif",
+    "cif", 
+    "protein",
+    "structure",
+    "bioinformatics",
+    "structural-biology",
+    "parser",
+    "crystallography",
+    "nim",
+    "pdb"
 ]
 
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9", 
+    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Other",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Software Development :: Libraries :: Python Modules",
     "Operating System :: OS Independent",
 ]
 
@@ -40,13 +52,19 @@ classifiers = [
 "Homepage" = "https://github.com/lucidrains/nim-mmcif"
 "Bug Tracker" = "https://github.com/lucidrains/nim-mmcif/issues"
 "Source Code" = "https://github.com/lucidrains/nim-mmcif"
-
-[project.scripts]
-nim-mmcif = "nim_mmcif_wrapper:main"
+"Documentation" = "https://github.com/lucidrains/nim-mmcif#readme"
 
 [project.optional-dependencies]
-dev = ["pytest>=6.0"]
-test = ["pytest>=6.0"]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "ruff>=0.1.0",
+]
+test = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
 
 [tool.setuptools]
 packages = ["nim_mmcif_wrapper"]
@@ -56,14 +74,40 @@ nim_mmcif_wrapper = "python_wrapper"
 
 [tool.setuptools.package-data]
 nim_mmcif_wrapper = [
-    "*.so", 
-    "*.dylib", 
+    "*.so",
+    "*.dylib",
     "*.pyd",
+    "*.dll",
     "*.cpython-*.so",
-    "*.cpython-*.dylib", 
+    "*.cpython-*.dylib",
     "*.cp*-*.pyd",
     "platform_modules/**/*"
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by black)
+]

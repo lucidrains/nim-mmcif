@@ -1,177 +1,210 @@
-"""
-Python wrapper for nim-mmcif using native Nim bindings
-"""
-import sys
+"""Python wrapper for nim-mmcif using native Nim bindings."""
+import importlib.util
 import platform
+import sys
 from pathlib import Path
-from typing import List, Dict, Any, Union
-from dataclasses import dataclass
+from typing import Any, Dict, List, Tuple, Union
+
+# Constants
+BINARY_NAME = "python_bindings"
+BINARY_EXTENSIONS = {
+    'Darwin': ['.so', '.dylib'],
+    'Linux': ['.so'],
+    'Windows': ['.pyd', '.dll']
+}
 
 
-try:
-    import python_bindings as nim_mmcif
-except ImportError as e:
-    # Check multiple locations for the binary
-    search_dirs = [
-        Path(__file__).parent,  # In the same directory as this file
-        Path(__file__).parent.parent,  # In the parent directory (development)
-        Path(__file__).parent / 'platform_modules',  # Platform-specific subdirectory
-    ]
-    
-    # Add all search directories to sys.path
-    for search_dir in search_dirs:
-        if search_dir.exists() and str(search_dir) not in sys.path:
-            sys.path.insert(0, str(search_dir))
-    
-    # Collect all potential binary files
-    binary_extensions = ['*.so', '*.dylib', '*.pyd', '*.dll']
-    so_files = []
-    for search_dir in search_dirs:
-        if search_dir.exists():
-            for ext in binary_extensions:
-                so_files.extend(search_dir.glob(f"python_bindings{ext}"))
-    
-    if so_files:
-        # Files exist but import failed - try to load them directly
-        import importlib.util
-        import importlib
-        
-        nim_mmcif = None
-        last_error = None
-        
-        for so_file in so_files:
-            try:
-                # For Windows, try ctypes first as a fallback
-                if so_file.suffix in ['.pyd', '.dll'] and platform.system() == 'Windows':
-                    import ctypes
-                    # Try to load the DLL to check for missing dependencies
-                    try:
-                        ctypes.CDLL(str(so_file))
-                    except OSError as dll_error:
-                        last_error = f"DLL load failed: {dll_error}"
-                        continue
-                
-                # Try loading the specific file
-                spec = importlib.util.spec_from_file_location("python_bindings", so_file)
-                if spec and spec.loader:
-                    nim_mmcif = importlib.util.module_from_spec(spec)
-                    sys.modules["python_bindings"] = nim_mmcif
-                    spec.loader.exec_module(nim_mmcif)
-                    break
-            except Exception as load_error:
-                last_error = str(load_error)
-                continue
-        
-        if nim_mmcif is None:
-            # Still failed - provide detailed error message
-            error_msg = (
-                f"Found python_bindings module files {[f.name for f in so_files]} but import failed. "
-            )
-            if platform.system() == 'Windows':
-                error_msg += (
-                    f"On Windows, this is often due to missing DLL dependencies. "
-                    f"Make sure Visual C++ Redistributables are installed. "
-                )
-            error_msg += (
-                f"Try rebuilding with appropriate flags for your platform. "
-                f"Last error: {last_error if last_error else e}"
-            )
-            raise ImportError(error_msg)
-    else:
-        # No module files found - need to build
-        build_cmd = "nim c --app:lib --out:python_bindings.so src/python_bindings.nim"
-        if platform.system() == 'Windows':
-            build_cmd = 'nim c --app:lib --dynlibOverride:python3 --passL:"-static-libgcc -static-libstdc++" --out:python_bindings.pyd src/python_bindings.nim'
-        
-        raise ImportError(
-            f"python_bindings module not found. Please build it first with: {build_cmd}. "
-            f"Make sure you have Nim installed and run the build command in the project root. "
-            f"Original error: {e}"
-        )
-
-def parse_mmcif(filepath: Union[str, Path]):
+def _find_binary() -> Path:
     """
-    Parse mmCIF file using Nim backend
+    Find the compiled binary module.
     
-    Args:
-        filepath: Path to the mmCIF file
-        
     Returns:
-        mmCIF object with atoms
+        Path to the binary module.
         
     Raises:
-        FileNotFoundError: If the mmCIF file doesn't exist
-        RuntimeError: If the Nim parser fails
+        ImportError: If no binary module is found.
     """
-    filepath = str(filepath)
+    system = platform.system()
+    extensions = BINARY_EXTENSIONS.get(system, ['.so'])
     
-    if not Path(filepath).exists():
+    search_dirs = [
+        Path(__file__).parent,
+        Path(__file__).parent.parent,
+        Path(__file__).parent / 'platform_modules',
+    ]
+    
+    for search_dir in search_dirs:
+        if not search_dir.exists():
+            continue
+            
+        for ext in extensions:
+            pattern = f"{BINARY_NAME}*{ext}"
+            for binary_path in search_dir.glob(pattern):
+                if binary_path.is_file():
+                    return binary_path
+    
+    raise ImportError(
+        f"Could not find {BINARY_NAME} binary module. "
+        f"Searched in: {[str(d) for d in search_dirs]}"
+    )
+
+
+def _load_binary_module():
+    """
+    Load the binary module with proper error handling.
+    
+    Returns:
+        The loaded module.
+        
+    Raises:
+        ImportError: If the module cannot be loaded.
+    """
+    try:
+        # Try standard import first
+        import python_bindings
+        return python_bindings
+    except ImportError:
+        pass
+    
+    # Find and load the binary directly
+    try:
+        binary_path = _find_binary()
+    except ImportError as e:
+        # Provide build instructions
+        build_cmd = "nim c --app:lib --out:python_wrapper/python_bindings"
+        if platform.system() == 'Darwin':
+            build_cmd += ".so"
+        elif platform.system() == 'Linux':
+            build_cmd += ".so"
+        elif platform.system() == 'Windows':
+            build_cmd += ".pyd"
+        else:
+            build_cmd += ".so"
+        build_cmd += " src/python_bindings.nim"
+        
+        raise ImportError(
+            f"No compiled binary found. Build with:\n  {build_cmd}\n"
+            f"Ensure Nim and nimpy are installed first."
+        ) from e
+    
+    # Load the module from file
+    spec = importlib.util.spec_from_file_location(BINARY_NAME, binary_path)
+    if not spec or not spec.loader:
+        raise ImportError(f"Could not load spec for {binary_path}")
+    
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[BINARY_NAME] = module
+    
+    try:
+        spec.loader.exec_module(module)
+    except Exception as e:
+        error_msg = f"Failed to load {binary_path}: {e}"
+        if platform.system() == 'Windows':
+            error_msg += "\nOn Windows, ensure Visual C++ Redistributables are installed."
+        raise ImportError(error_msg) from e
+    
+    return module
+
+
+# Load the binary module
+nim_mmcif = _load_binary_module()
+
+
+def parse_mmcif(filepath: Union[str, Path]) -> Dict[str, Any]:
+    """
+    Parse an mmCIF file using the Nim backend.
+    
+    Args:
+        filepath: Path to the mmCIF file.
+        
+    Returns:
+        Dictionary containing parsed mmCIF data with 'atoms' key.
+        
+    Raises:
+        FileNotFoundError: If the file doesn't exist.
+        RuntimeError: If parsing fails.
+    """
+    filepath = Path(filepath)
+    
+    if not filepath.exists():
         raise FileNotFoundError(f"mmCIF file not found: {filepath}")
     
     try:
-        return nim_mmcif.parse_mmcif(filepath)
+        return nim_mmcif.parse_mmcif(str(filepath))
     except Exception as e:
-        raise RuntimeError(f"Failed to parse mmCIF file: {e}")
+        raise RuntimeError(f"Failed to parse mmCIF file: {e}") from e
+
 
 def get_atom_count(filepath: Union[str, Path]) -> int:
     """
-    Get the number of atoms in a mmCIF file
+    Get the number of atoms in an mmCIF file.
     
     Args:
-        filepath: Path to the mmCIF file
+        filepath: Path to the mmCIF file.
         
     Returns:
-        Number of atoms in the file
+        Number of atoms in the file.
+        
+    Raises:
+        FileNotFoundError: If the file doesn't exist.
+        RuntimeError: If counting fails.
     """
-    filepath = str(filepath)
+    filepath = Path(filepath)
     
-    if not Path(filepath).exists():
+    if not filepath.exists():
         raise FileNotFoundError(f"mmCIF file not found: {filepath}")
     
     try:
-        return nim_mmcif.get_atom_count(filepath)
+        return nim_mmcif.get_atom_count(str(filepath))
     except Exception as e:
-        raise RuntimeError(f"Failed to get atom count: {e}")
+        raise RuntimeError(f"Failed to get atom count: {e}") from e
 
-def get_atoms(filepath: Union[str, Path]):
+
+def get_atoms(filepath: Union[str, Path]) -> List[Dict[str, Any]]:
     """
-    Get all atoms from a mmCIF file
+    Get all atoms from an mmCIF file.
     
     Args:
-        filepath: Path to the mmCIF file
+        filepath: Path to the mmCIF file.
         
     Returns:
-        List of Atom objects
+        List of dictionaries, each representing an atom with its properties.
+        
+    Raises:
+        FileNotFoundError: If the file doesn't exist.
+        RuntimeError: If reading atoms fails.
     """
-    filepath = str(filepath)
+    filepath = Path(filepath)
     
-    if not Path(filepath).exists():
+    if not filepath.exists():
         raise FileNotFoundError(f"mmCIF file not found: {filepath}")
     
     try:
-        return nim_mmcif.get_atoms(filepath)
+        return nim_mmcif.get_atoms(str(filepath))
     except Exception as e:
-        raise RuntimeError(f"Failed to get atoms: {e}")
+        raise RuntimeError(f"Failed to get atoms: {e}") from e
 
-def get_atom_positions(filepath: Union[str, Path]):
+
+def get_atom_positions(filepath: Union[str, Path]) -> List[Tuple[float, float, float]]:
     """
-    Get just the 3D coordinates of all atoms
+    Get 3D coordinates of all atoms from an mmCIF file.
     
     Args:
-        filepath: Path to the mmCIF file
+        filepath: Path to the mmCIF file.
         
     Returns:
-        List of (x, y, z) tuples
+        List of (x, y, z) coordinate tuples.
+        
+    Raises:
+        FileNotFoundError: If the file doesn't exist.
+        RuntimeError: If reading positions fails.
     """
-    filepath = str(filepath)
+    filepath = Path(filepath)
     
-    if not Path(filepath).exists():
+    if not filepath.exists():
         raise FileNotFoundError(f"mmCIF file not found: {filepath}")
     
     try:
-        return nim_mmcif.get_atom_positions(filepath)
+        return nim_mmcif.get_atom_positions(str(filepath))
     except Exception as e:
-        raise RuntimeError(f"Failed to get atom positions: {e}")
-
-# For backward compatibility
-mmcif_parse = parse_mmcif
+        raise RuntimeError(f"Failed to get atom positions: {e}") from e

@@ -1,144 +1,161 @@
-"""
-pytest tests for nim-mmcif Python bindings
-"""
-import pytest
+"""Tests for nim-mmcif Python bindings."""
+import math
 from pathlib import Path
 
+import pytest
 
-from python_wrapper import parse_mmcif, get_atom_count, get_atoms, get_atom_positions
+from nim_mmcif_wrapper import get_atom_count, get_atom_positions, get_atoms, parse_mmcif
 
 
 class TestMmcifParser:
-    """Test cases for the mmCIF parser"""
-    
+    """Test cases for the mmCIF parser."""
+
     @pytest.fixture
     def test_mmcif_file(self):
-        """Path to test mmCIF file"""
+        """Fixture providing path to test mmCIF file."""
         return Path(__file__).parent / "test.mmcif"
-    
+
     def test_file_exists(self, test_mmcif_file):
-        """Test that the test file exists"""
+        """Verify test file exists."""
         assert test_mmcif_file.exists(), f"Test file not found: {test_mmcif_file}"
-    
+
+    def test_parse_mmcif_returns_dict(self, test_mmcif_file):
+        """Test that parse_mmcif returns a dictionary with atoms."""
+        result = parse_mmcif(test_mmcif_file)
+        
+        assert isinstance(result, dict)
+        assert "atoms" in result
+        assert isinstance(result["atoms"], list)
+        assert len(result["atoms"]) == 7
+
     def test_get_atom_count(self, test_mmcif_file):
-        """Test getting atom count from mmCIF file"""
+        """Test atom count retrieval."""
         count = get_atom_count(test_mmcif_file)
+        
         assert isinstance(count, int)
-        assert count > 0, "Should have at least one atom"
-        # Based on the test.mmcif file, we expect 7 atoms
-        assert count == 7, f"Expected 7 atoms, got {count}"
-    
-    def test_parse_mmcif_returns_mmcif_object(self, test_mmcif_file):
-        """Test that parse_mmcif returns a mmCIF object"""
-        mmcif_obj = parse_mmcif(test_mmcif_file)
-        assert 'atoms' in mmcif_obj
-        assert len(mmcif_obj['atoms']) > 0, "Should return at least one atom"
-        assert len(mmcif_obj['atoms']) == 7, f"Expected 7 atoms, got {len(mmcif_obj['atoms'])}"
-    
-    def test_get_atoms_structure(self, test_mmcif_file):
-        """Test that get_atoms returns atoms with correct structure"""
+        assert count == 7
+
+    def test_get_atoms_returns_list(self, test_mmcif_file):
+        """Test that get_atoms returns a list of atom dictionaries."""
         atoms = get_atoms(test_mmcif_file)
         
-        # Test first atom
-        atom = atoms[0]
-        
-        # Check all required fields exist
-        assert 'type' in atom
-        assert 'id' in atom
-        assert 'type_symbol' in atom
-        assert 'label_atom_id' in atom
-        assert 'Cartn_x' in atom
-        assert 'Cartn_y' in atom
-        assert 'Cartn_z' in atom
-        assert 'x' in atom
-        assert 'y' in atom
-        assert 'z' in atom
-    
-    def test_first_atom_values(self, test_mmcif_file):
-        """Test specific values for the first atom"""
+        assert isinstance(atoms, list)
+        assert len(atoms) == 7
+        assert all(isinstance(atom, dict) for atom in atoms)
+
+    def test_atom_structure(self, test_mmcif_file):
+        """Test that atoms have the expected structure."""
         atoms = get_atoms(test_mmcif_file)
         first_atom = atoms[0]
         
-        # Based on the test.mmcif file content:
-        # ATOM   1    N  N   . VAL A 1 1   ? 6.204   16.869  4.854   1.00 49.05 ? 1   VAL A N   1
-        assert first_atom['type'] == "ATOM"
-        assert first_atom['id'] == 1
-        assert first_atom['type_symbol'] == "N"
-        assert first_atom['label_atom_id'] == "N"
-        assert first_atom['label_comp_id'] == "VAL"
-        assert first_atom['label_asym_id'] == "A"
-        assert first_atom['label_entity_id'] == 1
-        assert first_atom['label_seq_id'] == 1
-        assert abs(first_atom['Cartn_x'] - 6.204) < 0.001
-        assert abs(first_atom['Cartn_y'] - 16.869) < 0.001
-        assert abs(first_atom['Cartn_z'] - 4.854) < 0.001
-        assert abs(first_atom['occupancy'] - 1.00) < 0.001
-        assert abs(first_atom['B_iso_or_equiv'] - 49.05) < 0.001
+        # Check required fields
+        required_fields = [
+            "type", "id", "type_symbol", "label_atom_id",
+            "label_comp_id", "label_asym_id", "label_entity_id", "label_seq_id",
+            "Cartn_x", "Cartn_y", "Cartn_z", "x", "y", "z",
+            "occupancy", "B_iso_or_equiv"
+        ]
         
-        # Check that x, y, z are copies of Cartn_x, Cartn_y, Cartn_z
-        assert abs(first_atom['x'] - first_atom['Cartn_x']) < 0.001
-        assert abs(first_atom['y'] - first_atom['Cartn_y']) < 0.001
-        assert abs(first_atom['z'] - first_atom['Cartn_z']) < 0.001
-    
-    def test_all_atom_types(self, test_mmcif_file):
-        """Test that all atoms are ATOM type"""
+        for field in required_fields:
+            assert field in first_atom, f"Missing required field: {field}"
+
+    def test_first_atom_values(self, test_mmcif_file):
+        """Verify values of the first atom match expected data."""
         atoms = get_atoms(test_mmcif_file)
+        atom = atoms[0]
         
-        for atom in atoms:
-            assert atom['type'] == "ATOM", f"Expected ATOM type, got {atom['type']}"
-    
-    def test_atom_coordinates_range(self, test_mmcif_file):
-        """Test that atom coordinates are within reasonable range"""
-        atoms = get_atoms(test_mmcif_file)
+        # Expected values from test.mmcif
+        assert atom["type"] == "ATOM"
+        assert atom["id"] == 1
+        assert atom["type_symbol"] == "N"
+        assert atom["label_atom_id"] == "N"
+        assert atom["label_comp_id"] == "VAL"
+        assert atom["label_asym_id"] == "A"
+        assert atom["label_entity_id"] == 1
+        assert atom["label_seq_id"] == 1
         
-        for atom in atoms:
-            # Check that coordinates are reasonable (not NaN, not extremely large)
-            assert not (atom['x'] != atom['x']), f"x coordinate is NaN for atom {atom['id']}"  # NaN check
-            assert not (atom['y'] != atom['y']), f"y coordinate is NaN for atom {atom['id']}"
-            assert not (atom['z'] != atom['z']), f"z coordinate is NaN for atom {atom['id']}"
-            
-            assert abs(atom['x']) < 1000, f"x coordinate too large for atom {atom['id']}: {atom['x']}"
-            assert abs(atom['y']) < 1000, f"y coordinate too large for atom {atom['id']}: {atom['y']}"
-            assert abs(atom['z']) < 1000, f"z coordinate too large for atom {atom['id']}: {atom['z']}"
-    
-    def test_nonexistent_file(self):
-        """Test that nonexistent file raises FileNotFoundError"""
-        with pytest.raises(FileNotFoundError):
-            parse_mmcif("nonexistent_file.mmcif")
+        # Check coordinates
+        assert math.isclose(atom["Cartn_x"], 6.204, abs_tol=0.001)
+        assert math.isclose(atom["Cartn_y"], 16.869, abs_tol=0.001)
+        assert math.isclose(atom["Cartn_z"], 4.854, abs_tol=0.001)
         
-        with pytest.raises(FileNotFoundError):
-            get_atom_count("nonexistent_file.mmcif")
-    
-    def test_atom_ids_sequential(self, test_mmcif_file):
-        """Test that atom IDs are sequential starting from 1"""
+        # Check that x, y, z match Cartn values
+        assert atom["x"] == atom["Cartn_x"]
+        assert atom["y"] == atom["Cartn_y"]
+        assert atom["z"] == atom["Cartn_z"]
+        
+        # Check other properties
+        assert math.isclose(atom["occupancy"], 1.00, abs_tol=0.001)
+        assert math.isclose(atom["B_iso_or_equiv"], 49.05, abs_tol=0.001)
+
+    def test_all_atoms_are_valid(self, test_mmcif_file):
+        """Verify all atoms have valid data."""
         atoms = get_atoms(test_mmcif_file)
         
         for i, atom in enumerate(atoms):
-            expected_id = i + 1
-            assert atom['id'] == expected_id, f"Expected atom ID {expected_id}, got {atom['id']}"
-    
-    def test_valine_residue(self, test_mmcif_file):
-        """Test that all atoms belong to VAL residue"""
-        atoms = get_atoms(test_mmcif_file)
-        
-        for atom in atoms:
-            assert atom['label_comp_id'] == "VAL", f"Expected VAL residue, got {atom['label_comp_id']}"
-            assert atom['auth_comp_id'] == "VAL", f"Expected VAL auth residue, got {atom['auth_comp_id']}"
-    
+            # Check atom type
+            assert atom["type"] in ["ATOM", "HETATM"]
+            
+            # Check ID is sequential
+            assert atom["id"] == i + 1
+            
+            # Check coordinates are numbers
+            assert isinstance(atom["x"], (int, float))
+            assert isinstance(atom["y"], (int, float))
+            assert isinstance(atom["z"], (int, float))
+            
+            # Check coordinates are reasonable
+            assert -1000 < atom["x"] < 1000
+            assert -1000 < atom["y"] < 1000
+            assert -1000 < atom["z"] < 1000
+            
+            # Check occupancy and B-factor
+            assert 0 <= atom["occupancy"] <= 1
+            assert atom["B_iso_or_equiv"] >= 0
+
     def test_get_atom_positions(self, test_mmcif_file):
-        """Test get_atom_positions function"""
+        """Test coordinate extraction."""
         positions = get_atom_positions(test_mmcif_file)
         
         assert isinstance(positions, list)
-        assert len(positions) == 7, f"Expected 7 positions, got {len(positions)}"
+        assert len(positions) == 7
         
-        # Test first position
+        # Check first position
         x, y, z = positions[0]
-        assert abs(x - 6.204) < 0.001
-        assert abs(y - 16.869) < 0.001
-        assert abs(z - 4.854) < 0.001
+        assert math.isclose(x, 6.204, abs_tol=0.001)
+        assert math.isclose(y, 16.869, abs_tol=0.001)
+        assert math.isclose(z, 4.854, abs_tol=0.001)
+        
+        # Check all positions are valid tuples
+        for pos in positions:
+            assert isinstance(pos, tuple)
+            assert len(pos) == 3
+            assert all(isinstance(coord, (int, float)) for coord in pos)
+
+    def test_nonexistent_file_raises_error(self):
+        """Test proper error handling for missing files."""
+        nonexistent = "nonexistent_file.mmcif"
+        
+        with pytest.raises(FileNotFoundError):
+            parse_mmcif(nonexistent)
+        
+        with pytest.raises(FileNotFoundError):
+            get_atom_count(nonexistent)
+        
+        with pytest.raises(FileNotFoundError):
+            get_atoms(nonexistent)
+        
+        with pytest.raises(FileNotFoundError):
+            get_atom_positions(nonexistent)
+
+    def test_valine_residue_consistency(self, test_mmcif_file):
+        """Verify all atoms belong to VAL residue."""
+        atoms = get_atoms(test_mmcif_file)
+        
+        for atom in atoms:
+            assert atom["label_comp_id"] == "VAL"
+            assert atom["auth_comp_id"] == "VAL"
 
 
 if __name__ == "__main__":
-    # Allow running the tests directly
     pytest.main([__file__, "-v"])
