@@ -1,0 +1,140 @@
+name: Build nim-mmcif
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  test-nim:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Nim
+        uses: jiro4989/setup-nim-action@v2
+        with:
+          nim-version: "stable"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Install dependencies
+        run: nimble install -d
+      
+      - name: Run Nim tests
+        run: nimble test
+
+  build-python-module:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+            python-ext: .cpython-310-linux-gnu.so
+          - os: macos-13
+            arch: x86_64  
+            python-ext: .cpython-310-darwin.so
+          - os: macos-latest
+            arch: arm64
+            python-ext: .cpython-310-darwin.so
+          - os: windows-latest
+            arch: x86_64
+            python-ext: .cp310-win_amd64.pyd
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Nim
+        uses: jiro4989/setup-nim-action@v2
+        with:
+          nim-version: "stable"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install Nim dependencies
+        run: nimble install -d
+      
+      - name: Build Python module
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            nim c --app:lib --dynlibOverride:python3 --passL:"-static-libgcc -static-libstdc++" --out:python_bindings.dll src/python_bindings.nim
+          else
+            nim c --app:lib --out:python_bindings.so src/python_bindings.nim
+          fi
+      
+      - name: Rename Python module with correct extension
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            mv python_bindings.so python_bindings${{ matrix.python-ext }}
+          elif [[ "${{ matrix.os }}" == "macos"* ]]; then
+            mv python_bindings.so python_bindings${{ matrix.python-ext }}
+          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            mv python_bindings.dll python_bindings${{ matrix.python-ext }}
+          fi
+      
+      - name: Install pytest
+        run: pip install pytest
+      
+      - name: Run Python tests
+        env:
+          PYTHONPATH: .
+        run: pip install -e .
+        run: python -m pytest tests/test_python_bindings.py -v
+      
+      - name: Upload Python module artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-module-${{ matrix.os }}-${{ matrix.arch }}
+          path: python_bindings${{ matrix.python-ext }}
+          retention-days: 30
+
+  package-python-wheel:
+    needs: [test-nim, build-python-module]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Download all Python modules
+        uses: actions/download-artifact@v4
+        with:
+          pattern: python-module-*
+          merge-multiple: true
+          path: nim_mmcif_modules/
+      
+      - name: Install build dependencies
+        run: pip install build setuptools wheel
+      
+      - name: List downloaded modules
+        run: ls -la nim_mmcif_modules/
+      
+      - name: Build source distribution
+        run: python -m build --sdist
+      
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package
+          path: dist/
+          retention-days: 30
