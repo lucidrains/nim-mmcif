@@ -12,10 +12,24 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 try:
     import nim_mmcif
 except ImportError as e:
-    raise ImportError(
-        f"Could not import nim_mmcif module. Please build it first with 'nimble buildPythonModule'. "
-        f"Original error: {e}"
-    )
+    # Check if we're in a development environment
+    current_dir = Path(__file__).parent.parent
+    so_files = list(current_dir.glob("nim_mmcif*.so")) + list(current_dir.glob("nim_mmcif*.dylib")) + list(current_dir.glob("nim_mmcif*.pyd"))
+    
+    if so_files:
+        # Files exist but import failed - might be a compatibility issue
+        raise ImportError(
+            f"Found nim_mmcif module files {[f.name for f in so_files]} but import failed. "
+            f"This might be a compatibility issue. Try rebuilding with 'nimble buildPythonModule'. "
+            f"Original error: {e}"
+        )
+    else:
+        # No module files found - need to build
+        raise ImportError(
+            f"nim_mmcif module not found. Please build it first with 'nimble buildPythonModule'. "
+            f"Make sure you have Nim installed and run the build command in the project root. "
+            f"Original error: {e}"
+        )
 
 @dataclass
 class Atom:

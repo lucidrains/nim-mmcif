@@ -36,12 +36,10 @@ jobs:
       
       - name: Build Python modules for all platforms
         run: |
-          # Build for Linux
+          # Build for Linux (current platform in CI)
           nimble buildPythonModule
-          mkdir -p python_wrapper/platform_modules/linux
-          cp nim_mmcif.so python_wrapper/platform_modules/linux/nim_mmcif.cpython-310-linux-gnu.so
           
-          echo "Built Linux module"
+          echo "Built module for distribution"
       
       - name: Build Python package
         run: python -m build

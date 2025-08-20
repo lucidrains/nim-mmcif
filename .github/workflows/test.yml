@@ -25,6 +25,14 @@ jobs:
       run: |
         nimble buildPythonModule
 
-    - name: Test
+    - name: Install pytest
+      run: |
+        pip install pytest
+
+    - name: Test Nim
       run: |
         nimble test
+
+    - name: Test Python bindings
+      run: |
+        python -m pytest tests/test_python_bindings.py -v
