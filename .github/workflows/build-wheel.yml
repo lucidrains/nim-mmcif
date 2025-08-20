@@ -51,7 +51,7 @@ jobs:
           CIBW_ARCHS_WINDOWS: AMD64
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: "auditwheel repair -w {dest_dir} {wheel}"
           CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-wheel -w {dest_dir} {wheel}"
-          CIBW_BEFORE_BUILD: "nimble buildPythonModule"
+          CIBW_BEFORE_BUILD: "/home/runner/work/nim-mmcif/nim-mmcif/.nim_runtime/bin/nimble buildPythonModule"
           CIBW_ENVIRONMENT: 'PATH="$PATH"'
 
       - name: Upload build artifacts
