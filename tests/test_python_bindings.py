@@ -4,11 +4,8 @@ pytest tests for nim-mmcif Python bindings
 import pytest
 from pathlib import Path
 
-# Add the python_wrapper to the path
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent / "python_wrapper"))
 
-from mmcif import parse_mmcif, get_atom_count, get_atoms, get_atom_positions
+from python_wrapper import parse_mmcif, get_atom_count, get_atoms, get_atom_positions
 
 
 class TestMmcifParser:

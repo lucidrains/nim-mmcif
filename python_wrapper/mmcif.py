@@ -6,8 +6,6 @@ from pathlib import Path
 from typing import List, Dict, Any, Union
 from dataclasses import dataclass
 
-# Add the parent directory to Python path so we can import the compiled Nim module
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
     import python_bindings as nim_mmcif

@@ -9,12 +9,12 @@ srcDir        = "src"
 # Dependencies
 
 requires "nim >= 2.2.4"
-requires "nimpy"
+requires "nimpy >= 0.2.1"
 
 # Tasks
 
 task buildPythonModule, "Build Python module":
   when defined(windows):
-    exec "nim c --app:lib --out:nim_mmcif.dll src/python_bindings.nim"
+    exec "nim c --app:lib --out:src/nim_mmcif.dll src/python_bindings.nim"
   else:
-    exec "nim c --app:lib --out:nim_mmcif.so src/python_bindings.nim"
+    exec "nim c --app:lib --out:src/nim_mmcif.so src/python_bindings.nim"

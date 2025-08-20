@@ -12,7 +12,9 @@ authors = [
     {name = "lucidrains", email = "lucidrains@gmail.com"}
 ]
 requires-python = ">=3.8"
-dependencies = []
+dependencies = [
+    "nimporter"
+]
 
 keywords = [
     "mmcif", "protein", "structure", "bioinformatics", 
