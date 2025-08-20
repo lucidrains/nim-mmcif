@@ -23,7 +23,12 @@ jobs:
         with:
           nim-version: "stable"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      
+
+      - name: Print the Nimble Path
+        run: |
+          echo "${{ steps.setup_nim.outputs.nim-bin-path }}"
+          which nimble
+
       - name: Install dependencies
         run: nimble install -d
       
