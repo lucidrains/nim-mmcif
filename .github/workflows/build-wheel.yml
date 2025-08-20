@@ -34,7 +34,7 @@ jobs:
           which nimble
 
       - name: Install Nim dependencies
-        run: nimble install -d
+        run: /home/runner/work/nim-mmcif/nim-mmcif/.nim_runtime/bin/nimble install -d
 
       - name: Install Python build dependencies
         run: |
