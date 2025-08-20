@@ -5,13 +5,10 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "nim-mmcif"
 version = "0.0.1"
-description = "Fast mmCIF parser written in Nim with Python bindings"
+description = "mmCIF parser written in Nim with Python bindings"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "lucidrains", email = "lucidrains@gmail.com"}
-]
-maintainers = [
     {name = "lucidrains", email = "lucidrains@gmail.com"}
 ]
 requires-python = ">=3.8"
@@ -50,30 +47,23 @@ classifiers = [
 
 [project.urls]
 "Homepage" = "https://github.com/lucidrains/nim-mmcif"
-"Bug Tracker" = "https://github.com/lucidrains/nim-mmcif/issues"
-"Source Code" = "https://github.com/lucidrains/nim-mmcif"
-"Documentation" = "https://github.com/lucidrains/nim-mmcif#readme"
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
-    "pytest-cov>=4.0",
-    "black>=23.0",
-    "ruff>=0.1.0",
 ]
 test = [
     "pytest>=7.0",
-    "pytest-cov>=4.0",
 ]
 
 [tool.setuptools]
-packages = ["nim_mmcif_wrapper"]
+packages = ["nim_mmcif"]
 
 [tool.setuptools.package-dir]
-nim_mmcif_wrapper = "python_wrapper"
+nim_mmcif = "python_wrapper"
 
 [tool.setuptools.package-data]
-nim_mmcif_wrapper = [
+nim_mmcif = [
     "*.so",
     "*.dylib",
     "*.pyd",
@@ -89,25 +79,3 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-
-[tool.black]
-line-length = 100
-target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
-
-[tool.ruff]
-line-length = 100
-target-version = "py38"
-
-[tool.ruff.lint]
-select = [
-    "E",   # pycodestyle errors
-    "W",   # pycodestyle warnings
-    "F",   # pyflakes
-    "I",   # isort
-    "B",   # flake8-bugbear
-    "C4",  # flake8-comprehensions
-    "UP",  # pyupgrade
-]
-ignore = [
-    "E501",  # line too long (handled by black)
-]
