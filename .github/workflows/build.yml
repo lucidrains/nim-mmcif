@@ -92,8 +92,9 @@ jobs:
       - name: Run Python tests
         env:
           PYTHONPATH: .
-        run: pip install -e .
-        run: python -m pytest tests/test_python_bindings.py -v
+        run: |
+          pip install -e .
+          python -m pytest tests/test_python_bindings.py -v
       
       - name: Upload Python module artifact
         uses: actions/upload-artifact@v4
@@ -122,7 +123,7 @@ jobs:
           pattern: python-module-*
           merge-multiple: true
           path: nim_mmcif_modules/
-      
+
       - name: Install build dependencies
         run: pip install build setuptools wheel
       
