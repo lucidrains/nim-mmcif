@@ -15,12 +15,33 @@ except ImportError as e:
     so_files = list(current_dir.glob("python_bindings*.so")) + list(current_dir.glob("python_bindings*.dylib")) + list(current_dir.glob("python_bindings*.pyd"))
     
     if so_files:
-        # Files exist but import failed - might be a compatibility issue
-        raise ImportError(
-            f"Found python_bindings module files {[f.name for f in so_files]} but import failed. "
-            f"This might be a compatibility issue. Try rebuilding with: nim c --app:lib --out:python_bindings.so src/python_bindings.nim. "
-            f"Original error: {e}"
-        )
+        # Files exist but import failed - try to add the directory to sys.path and import again
+        sys.path.insert(0, str(current_dir))
+        
+        # Try importing with the exact filename (without extension)
+        import importlib.util
+        import importlib
+        
+        nim_mmcif = None
+        for so_file in so_files:
+            try:
+                # Try loading the specific file
+                spec = importlib.util.spec_from_file_location("python_bindings", so_file)
+                if spec and spec.loader:
+                    nim_mmcif = importlib.util.module_from_spec(spec)
+                    sys.modules["python_bindings"] = nim_mmcif
+                    spec.loader.exec_module(nim_mmcif)
+                    break
+            except Exception:
+                continue
+        
+        if nim_mmcif is None:
+            # Still failed - might be a compatibility issue
+            raise ImportError(
+                f"Found python_bindings module files {[f.name for f in so_files]} but import failed. "
+                f"This might be a compatibility issue. Try rebuilding with: nim c --app:lib --out:python_bindings.so src/python_bindings.nim. "
+                f"Original error: {e}"
+            )
     else:
         # No module files found - need to build
         raise ImportError(

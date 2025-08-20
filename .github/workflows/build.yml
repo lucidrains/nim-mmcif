@@ -90,6 +90,8 @@ jobs:
         run: pip install pytest
       
       - name: Run Python tests
+        env:
+          PYTHONPATH: .
         run: python -m pytest tests/test_python_bindings.py -v
       
       - name: Upload Python module artifact
