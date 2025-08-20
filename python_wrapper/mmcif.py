@@ -10,61 +10,28 @@ from dataclasses import dataclass
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
-    import nim_mmcif
+    import python_bindings as nim_mmcif
 except ImportError as e:
     # Check if we're in a development environment
     current_dir = Path(__file__).parent.parent
-    so_files = list(current_dir.glob("nim_mmcif*.so")) + list(current_dir.glob("nim_mmcif*.dylib")) + list(current_dir.glob("nim_mmcif*.pyd"))
+    so_files = list(current_dir.glob("python_bindings*.so")) + list(current_dir.glob("python_bindings*.dylib")) + list(current_dir.glob("python_bindings*.pyd"))
     
     if so_files:
         # Files exist but import failed - might be a compatibility issue
         raise ImportError(
-            f"Found nim_mmcif module files {[f.name for f in so_files]} but import failed. "
-            f"This might be a compatibility issue. Try rebuilding with 'nimble buildPythonModule'. "
+            f"Found python_bindings module files {[f.name for f in so_files]} but import failed. "
+            f"This might be a compatibility issue. Try rebuilding with: nim c --app:lib --out:python_bindings.so src/python_bindings.nim. "
             f"Original error: {e}"
         )
     else:
         # No module files found - need to build
         raise ImportError(
-            f"nim_mmcif module not found. Please build it first with 'nimble buildPythonModule'. "
+            f"python_bindings module not found. Please build it first with: nim c --app:lib --out:python_bindings.so src/python_bindings.nim. "
             f"Make sure you have Nim installed and run the build command in the project root. "
             f"Original error: {e}"
         )
 
-@dataclass
-class Atom:
-    """Python representation of a mmCIF atom"""
-    type: str
-    id: int
-    type_symbol: str
-    label_atom_id: str
-    label_alt_id: str
-    label_comp_id: str
-    label_asym_id: str
-    label_entity_id: int
-    label_seq_id: int
-    pdbx_PDB_ins_code: str
-    Cartn_x: float
-    Cartn_y: float
-    Cartn_z: float
-    occupancy: float
-    B_iso_or_equiv: float
-    pdbx_formal_charge: str
-    auth_seq_id: int
-    auth_comp_id: str
-    auth_asym_id: str
-    auth_atom_id: str
-    pdbx_PDB_model_num: int
-    x: float
-    y: float
-    z: float
-    
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'Atom':
-        """Create Atom from dictionary"""
-        return cls(**data)
-
-def parse_mmcif(filepath: Union[str, Path]) -> List[Atom]:
+def parse_mmcif(filepath: Union[str, Path]):
     """
     Parse mmCIF file using Nim backend
     
@@ -72,7 +39,7 @@ def parse_mmcif(filepath: Union[str, Path]) -> List[Atom]:
         filepath: Path to the mmCIF file
         
     Returns:
-        List of Atom objects
+        mmCIF object with atoms
         
     Raises:
         FileNotFoundError: If the mmCIF file doesn't exist
@@ -84,16 +51,7 @@ def parse_mmcif(filepath: Union[str, Path]) -> List[Atom]:
         raise FileNotFoundError(f"mmCIF file not found: {filepath}")
     
     try:
-        # Call the Nim function directly
-        result = nim_mmcif.parse_mmcif_py(filepath)
-        
-        # Convert to Atom objects
-        atoms = []
-        for atom_data in result['atoms']:
-            atoms.append(Atom.from_dict(atom_data))
-        
-        return atoms
-        
+        return nim_mmcif.parse_mmcif(filepath)
     except Exception as e:
         raise RuntimeError(f"Failed to parse mmCIF file: {e}")
 
@@ -113,9 +71,49 @@ def get_atom_count(filepath: Union[str, Path]) -> int:
         raise FileNotFoundError(f"mmCIF file not found: {filepath}")
     
     try:
-        return nim_mmcif.get_atom_count_py(filepath)
+        return nim_mmcif.get_atom_count(filepath)
     except Exception as e:
         raise RuntimeError(f"Failed to get atom count: {e}")
+
+def get_atoms(filepath: Union[str, Path]):
+    """
+    Get all atoms from a mmCIF file
+    
+    Args:
+        filepath: Path to the mmCIF file
+        
+    Returns:
+        List of Atom objects
+    """
+    filepath = str(filepath)
+    
+    if not Path(filepath).exists():
+        raise FileNotFoundError(f"mmCIF file not found: {filepath}")
+    
+    try:
+        return nim_mmcif.get_atoms(filepath)
+    except Exception as e:
+        raise RuntimeError(f"Failed to get atoms: {e}")
+
+def get_atom_positions(filepath: Union[str, Path]):
+    """
+    Get just the 3D coordinates of all atoms
+    
+    Args:
+        filepath: Path to the mmCIF file
+        
+    Returns:
+        List of (x, y, z) tuples
+    """
+    filepath = str(filepath)
+    
+    if not Path(filepath).exists():
+        raise FileNotFoundError(f"mmCIF file not found: {filepath}")
+    
+    try:
+        return nim_mmcif.get_atom_positions(filepath)
+    except Exception as e:
+        raise RuntimeError(f"Failed to get atom positions: {e}")
 
 # For backward compatibility
 mmcif_parse = parse_mmcif
