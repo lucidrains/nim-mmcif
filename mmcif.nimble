@@ -9,3 +9,12 @@ srcDir        = "src"
 # Dependencies
 
 requires "nim >= 2.2.4"
+requires "nimpy"
+
+# Tasks
+
+task buildPythonModule, "Build Python module":
+  when defined(macosx):
+    exec "nim c --app:lib --out:nim_mmcif.dylib src/python_bindings.nim"
+  else:
+    exec "nim c --app:lib --out:nim_mmcif.so src/python_bindings.nim"

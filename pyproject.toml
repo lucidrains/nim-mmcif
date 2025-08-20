@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nim-mmcif"
+version = "0.0.1"
+description = "Fast mmCIF parser written in Nim with Python bindings"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "lucidrains", email = "lucidrains@gmail.com"}
+]
+requires-python = ">=3.8"
+dependencies = []
+
+keywords = [
+    "mmcif", "protein", "structure", "bioinformatics", 
+    "parser", "crystallography", "nim"
+]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9", 
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/lucidrains/nim-mmcif"
+"Bug Tracker" = "https://github.com/lucidrains/nim-mmcif/issues"
+"Source Code" = "https://github.com/lucidrains/nim-mmcif"
+
+[project.scripts]
+nim-mmcif = "nim_mmcif_wrapper:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=6.0"]
+test = ["pytest>=6.0"]
+
+[tool.setuptools]
+packages = ["nim_mmcif_wrapper"]
+
+[tool.setuptools.package-dir]
+nim_mmcif_wrapper = "python_wrapper"
+
+[tool.setuptools.package-data]
+nim_mmcif_wrapper = [
+    "*.so", 
+    "*.dylib", 
+    "*.pyd",
+    "*.cpython-*.so",
+    "*.cpython-*.dylib", 
+    "*.cp*-*.pyd",
+    "platform_modules/**/*"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
