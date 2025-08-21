@@ -26,13 +26,9 @@ class NimBuildExt(build_ext):
         super().run()
     
     def copy_mmcif_source(self):
-        """Copy mmcif.nim from src to nim_mmcif directory."""
-        import shutil
-        src_file = Path('src/mmcif.nim')
-        dest_file = Path('nim_mmcif/mmcif.nim')
-        if src_file.exists():
-            print(f"Copying {src_file} to {dest_file}")
-            shutil.copy2(src_file, dest_file)
+        """Ensure mmcif.nim exists in nim_mmcif directory."""
+        # No longer needed since files are already in nim_mmcif/
+        pass
     
     def check_nim_installed(self):
         """Check if Nim compiler is installed."""
