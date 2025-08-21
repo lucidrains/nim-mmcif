@@ -106,7 +106,7 @@ Each atom dictionary contains:
 ### Automatic Build
 
 ```bash
-python build.py
+python build_nim.py
 ```
 
 ### Manual Build

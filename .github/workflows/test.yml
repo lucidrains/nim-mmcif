@@ -164,6 +164,15 @@ jobs:
         path: dist/*.whl
     
     - name: Test wheel installation
+      shell: bash
       run: |
-        pip install dist/*.whl
+        # Find the wheel file and install it
+        WHEEL_FILE=$(ls dist/*.whl 2>/dev/null | head -n 1)
+        if [ -z "$WHEEL_FILE" ]; then
+          echo "Error: No wheel file found in dist/"
+          ls -la dist/ || echo "dist directory does not exist"
+          exit 1
+        fi
+        echo "Installing wheel: $WHEEL_FILE"
+        pip install "$WHEEL_FILE"
         python -c "import nim_mmcif; print('Wheel installation successful')"
