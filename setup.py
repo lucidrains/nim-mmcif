@@ -4,7 +4,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from setuptools import setup
+from setuptools import setup, Extension
 
 
 def find_and_install_binary() -> bool:
@@ -70,4 +70,12 @@ if not find_and_install_binary():
     )
 
 # Use pyproject.toml for package configuration
-setup()
+
+ext_modules = [
+    Extension(
+        "nim_mmcif.python_bindings", 
+        sources=[]
+    )
+]
+
+setup(ext_modules = ext_modules)

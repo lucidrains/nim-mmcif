@@ -75,7 +75,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install build
           nimble install -d
-      
+
       - name: Build source distribution
         run: python -m build --sdist
       

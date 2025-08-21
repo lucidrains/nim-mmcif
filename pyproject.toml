@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nim-mmcif"
-version = "0.0.4"
+version = "0.0.5"
 description = "mmCIF parser written in Nim with Python bindings"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -41,8 +41,7 @@ classifiers = [
     "Programming Language :: Other",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Chemistry",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 
 [project.urls]
@@ -58,7 +57,7 @@ test = [
 
 [tool.setuptools]
 packages = ["nim_mmcif"]
-license-files = []
+license-files = ["LICENSE"]
 
 [tool.setuptools.package-dir]
 nim_mmcif = "python_wrapper"
