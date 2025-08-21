@@ -41,12 +41,6 @@ jobs:
           pip install build
           python -m build .
 
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
-          packages-dir: dist/
-
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -86,7 +80,7 @@ jobs:
           path: dist/*.tar.gz
 
   publish-pypi:
-    needs: [build]
+    needs: [build, build-sdist]
     runs-on: ubuntu-latest    
     steps:
       - name: Download all artifacts
