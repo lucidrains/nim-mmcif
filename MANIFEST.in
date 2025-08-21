@@ -7,7 +7,6 @@ include build_nim.py
 
 # Include all Nim source files
 recursive-include nim_mmcif *.nim *.nimble *.cfg *.nim.cfg
-recursive-include src *.nim
 recursive-include tests *.nim *.mmcif *.py *.nims
 
 # Include nimbase headers from nim-extensions
