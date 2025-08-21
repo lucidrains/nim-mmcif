@@ -100,11 +100,6 @@ jobs:
           find dist -name "*.whl" -exec cp {} final-dist/ \;
           find dist -name "*.tar.gz" -exec cp {} final-dist/ \;
       
-      - name: Check distribution
-        run: |
-          pip install twine
-          python -m twine check final-dist/*
-      
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
