@@ -4,11 +4,51 @@ on:
   release:
     types: [published]
   workflow_dispatch:
-
-permissions:
-  contents: read
+    inputs:
+      test_pypi:
+        description: 'Publish to Test PyPI instead'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
+  build-sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      - name: Install Nim
+        run: |
+          curl https://nim-lang.org/choosenim/init.sh -sSf | sh -s -- -y
+          export PATH=$HOME/.nimble/bin:$PATH
+          echo "$HOME/.nimble/bin" >> $GITHUB_PATH
+          nim --version
+          nimble install nimpy -y
+      
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build twine
+      
+      - name: Build sdist
+        run: python -m build --sdist
+      
+      - name: Check sdist with twine
+        run: twine check dist/*.tar.gz
+      
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
   build-wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -18,171 +58,99 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
     
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-      
-      # Install Nim based on platform
-      - name: Setup Nim (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install nim
-          echo "Nim version: $(nim --version)"
-
-      - name: Setup Nim (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          curl https://nim-lang.org/choosenim/init.sh -sSf | sh -s -- -y
-          echo "$HOME/.nimble/bin" >> $GITHUB_PATH
-          export PATH=$HOME/.nimble/bin:$PATH
-          nim --version
-
-      - name: Setup Nim (Windows)
-        if: runner.os == 'Windows'
-        uses: jiro4989/setup-nim-action@v2
-        with:
-          nim-version: 'stable'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install Nim dependencies
-        run: |
-          nimble install nimpy -y
-          nimble install -d -y
-
-      - name: Build wheels using cibuildwheel
+      - name: Build wheels
         uses: pypa/cibuildwheel@v2.19.1
         env:
           CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-* cp312-*"
-          CIBW_SKIP: "*-musllinux_*"
+          CIBW_SKIP: "*-musllinux_* *i686 *win32"
           CIBW_ARCHS_LINUX: "x86_64"
           CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_ARCHS_WINDOWS: "AMD64"
+          # Linux setup
           CIBW_BEFORE_ALL_LINUX: |
+            yum install -y wget || apt-get update && apt-get install -y wget
             curl https://nim-lang.org/choosenim/init.sh -sSf | sh -s -- -y
-            echo "$HOME/.nimble/bin" >> $GITHUB_PATH
             export PATH=$HOME/.nimble/bin:$PATH
+            echo "$HOME/.nimble/bin" >> $GITHUB_PATH
+            nim --version
             nimble install nimpy -y
+          # macOS setup
           CIBW_BEFORE_ALL_MACOS: |
             brew install nim
+            nim --version
             nimble install nimpy -y
+          # Windows setup
           CIBW_BEFORE_ALL_WINDOWS: |
             choco install nim -y
+            refreshenv
+            nim --version
             nimble install nimpy -y
+          # Common build requirements
           CIBW_BEFORE_BUILD: |
+            pip install --upgrade pip setuptools wheel
             pip install nimporter>=1.1.0
-          CIBW_TEST_REQUIRES: pytest
+          # Test imports
           CIBW_TEST_COMMAND: |
-            python -c "import nim_mmcif; print('Successfully imported nim_mmcif')"
-            python -c "from nim_mmcif import parse_mmcif; print('Successfully imported parse_mmcif')"
-
+            python -c "import nim_mmcif; print(f'nim_mmcif version: {nim_mmcif.__version__}')"
+            python -c "from nim_mmcif import parse_mmcif; print('parse_mmcif imported successfully')"
+          # Build settings
+          CIBW_BUILD_VERBOSITY: 1
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+          CIBW_MANYLINUX_I686_IMAGE: manylinux2014
+      
+      - name: Check wheels with twine
+        run: |
+          python -m pip install twine
+          twine check wheelhouse/*.whl
+      
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: cibw-wheels-${{ matrix.os }}
-          path: ./wheelhouse/*.whl
-  
-  build-sdist:
-    name: Build source distribution
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-      
-      - name: Setup Nim
-        run: |
-          curl https://nim-lang.org/choosenim/init.sh -sSf | sh -s -- -y
-          echo "$HOME/.nimble/bin" >> $GITHUB_PATH
-          export PATH=$HOME/.nimble/bin:$PATH
-          nim --version
-      
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install build setuptools wheel
-          nimble install nimpy -y
-          nimble install -d -y
+          name: wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
 
-      - name: Build source distribution
-        run: python -m build --sdist
-      
-      - name: Check sdist
-        run: |
-          pip install twine
-          twine check dist/*.tar.gz
-      
-      - name: Upload sdist artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: cibw-sdist
-          path: dist/*.tar.gz
-
-  publish-pypi:
+  publish:
     name: Publish to PyPI
-    needs: [build-wheels, build-sdist]
+    needs: [build-sdist, build-wheels]
     runs-on: ubuntu-latest
     environment:
       name: pypi
       url: https://pypi.org/p/nim-mmcif
     permissions:
-      id-token: write  # Required for trusted publishing
-    if: github.event_name == 'release' && github.event.action == 'published'
+      id-token: write  # For trusted publishing
     
     steps:
-      - name: Download all artifacts
+      - name: Download sdist
         uses: actions/download-artifact@v4
         with:
-          pattern: cibw-*
+          name: sdist
+          path: dist
+      
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
           path: dist
           merge-multiple: true
       
-      - name: List distribution files
+      - name: List distributions
         run: |
-          ls -la dist/
-          echo "Total files to upload:"
-          find dist -type f -name "*.whl" -o -name "*.tar.gz" | wc -l
-      
-      - name: Check distributions with twine
-        run: |
-          pip install twine
-          twine check dist/*
-      
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          verbose: true
-          print-hash: true
-          skip-existing: true  # Skip already uploaded packages for safety
-
-  publish-test-pypi:
-    name: Publish to Test PyPI (optional)
-    needs: [build-wheels, build-sdist]
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: cibw-*
-          path: dist
-          merge-multiple: true
-      
-      - name: List distribution files
-        run: |
+          echo "Distributions to publish:"
           ls -la dist/
       
       - name: Publish to Test PyPI
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.test_pypi == 'true'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
-          verbose: true
           skip-existing: true
+          verbose: true
+      
+      - name: Publish to PyPI
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.test_pypi != 'true')
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+          verbose: true

@@ -2,7 +2,7 @@
 
 import nimpy
 import sequtils
-import mmcif
+import ./mmcif
 
 proc parse_mmcif(filepath: string): mmCIF {.exportpy.} =
   ## Parse an mmCIF file and return the mmCIF structure.
