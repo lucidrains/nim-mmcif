@@ -93,7 +93,7 @@ jobs:
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install nimporter pytest
+        pip install setuptools nimporter pytest
     
     - name: Install package
       run: |
@@ -110,7 +110,7 @@ jobs:
     
     - name: Test nimporter compilation
       run: |
-        python -c "import nimporter; nimporter.build_nim_extensions(); print('Nimporter build successful')"
+        python -c "import setuptools; import nimporter; nimporter.build_nim_extensions(); print('Nimporter build successful')"
 
   build-wheels:
     needs: test
