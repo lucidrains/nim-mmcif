@@ -24,10 +24,16 @@ jobs:
         with:
           python-version: '3.10'
       
-      - name: Setup Nim
+      - name: Setup Nim OSX
+        if: runner.os == 'macOS'
+        run: |
+          brew install nim
+
+      - name: Setup Nim Linux / Windows
+        if: runner.os == 'Linux' || runner.os == 'Windows'
         uses: jiro4989/setup-nim-action@v2
         with:
-          nim-version: "stable"
+          nim-version: '2.2.4'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Nim dependencies
