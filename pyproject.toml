@@ -7,8 +7,7 @@ name = "nim-mmcif"
 version = "0.0.5"
 description = "mmCIF parser written in Nim with Python bindings"
 readme = "README.md"
-license = "MIT"
-license-files = ["LICENSE"]
+license = {text = "MIT"}
 authors = [
     {name = "lucidrains", email = "lucidrains@gmail.com"}
 ]
