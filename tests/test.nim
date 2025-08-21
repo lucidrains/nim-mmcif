@@ -1,8 +1,10 @@
 import unittest
 import ../src/mmcif
+import os
 
 test "can parse mmcif file":
-  let parsed = mmcif_parse("test.mmcif")
+  let testFile = currentSourcePath().parentDir() / "test.mmcif"
+  let parsed = mmcif_parse(testFile)
 
   test "parses the correct number of atoms":
     check parsed.atoms.len == 7
