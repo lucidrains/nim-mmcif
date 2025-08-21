@@ -12,6 +12,9 @@ class NimBuildExt(build_ext):
     """Custom build extension for compiling Nim code."""
     
     def run(self):
+        # Copy mmcif.nim to nim_mmcif directory if needed
+        self.copy_mmcif_source()
+        
         # Try to ensure Nim is available
         if not self.check_nim_installed():
             self.install_nim()
@@ -21,6 +24,15 @@ class NimBuildExt(build_ext):
         
         # Run the parent build_ext
         super().run()
+    
+    def copy_mmcif_source(self):
+        """Copy mmcif.nim from src to nim_mmcif directory."""
+        import shutil
+        src_file = Path('src/mmcif.nim')
+        dest_file = Path('nim_mmcif/mmcif.nim')
+        if src_file.exists():
+            print(f"Copying {src_file} to {dest_file}")
+            shutil.copy2(src_file, dest_file)
     
     def check_nim_installed(self):
         """Check if Nim compiler is installed."""

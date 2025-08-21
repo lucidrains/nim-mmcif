@@ -56,6 +56,14 @@ def check_nimpy_installation():
 
 def build_nim_extension(system, machine):
     """Build the Nim extension for the current platform."""
+    # Copy mmcif.nim to nim_mmcif directory if it doesn't exist
+    import shutil
+    src_file = Path('src/mmcif.nim')
+    dest_file = Path('nim_mmcif/mmcif.nim')
+    if src_file.exists() and not dest_file.exists():
+        print(f"Copying {src_file} to {dest_file}")
+        shutil.copy2(src_file, dest_file)
+    
     os.chdir('nim_mmcif')
     
     # Base command
