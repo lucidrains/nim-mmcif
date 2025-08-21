@@ -3,11 +3,12 @@
 
 try:
     # Enable nimporter to compile and import .nim files
+    import nimporter
 
     # Import the Nim module directly
     # Note: nimporter.build_nim_extensions() is only needed during setup/build,
     # not at runtime. The import hooks are automatically installed when nimporter is imported.
-    from . import nim_mmcif as mmcif
+    import nim_mmcif.nim_mmcif as mmcif
 
     # Re-export the functions with Python-friendly wrappers
     from pathlib import Path
