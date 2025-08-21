@@ -7,7 +7,8 @@ name = "nim-mmcif"
 version = "0.0.5"
 description = "mmCIF parser written in Nim with Python bindings"
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     {name = "lucidrains", email = "lucidrains@gmail.com"}
 ]
@@ -33,7 +34,6 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
@@ -59,7 +59,6 @@ test = [
 
 [tool.setuptools]
 packages = ["nim_mmcif"]
-license-files = ["LICENSE"]
 
 [tool.setuptools.package-data]
 nim_mmcif = [
