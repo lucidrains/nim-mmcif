@@ -8,11 +8,9 @@ try:
     # Enable nimporter to compile and import .nim files
     import nimporter
     
-    # Configure nimporter for the current platform
-    # This ensures proper compilation flags are used
-    nimporter.build_nim_extensions()
-    
     # Import the Nim module directly
+    # Note: nimporter.build_nim_extensions() is only needed during setup/build,
+    # not at runtime. The import hooks are automatically installed when nimporter is imported.
     from . import nim_mmcif as mmcif
     
     # Re-export the functions with Python-friendly wrappers
@@ -133,11 +131,29 @@ try:
 except ImportError as e:
     # Fallback error message if nimporter is not installed
     import sys
-    error_msg = (
-        "Failed to import nim-mmcif. Please ensure:\n"
+    
+    # Check for specific missing dependencies
+    missing_deps = []
+    try:
+        import nimporter
+    except ImportError:
+        missing_deps.append("nimporter")
+    
+    error_msg = "Failed to import nim-mmcif. "
+    
+    if missing_deps:
+        error_msg += f"Missing dependencies: {', '.join(missing_deps)}\n"
+    
+    error_msg += (
+        "Please ensure:\n"
         "1. nimporter is installed: pip install nimporter\n"
         "2. Nim compiler is installed: https://nim-lang.org/install.html\n"
         "3. nimpy is installed: nimble install nimpy\n"
-        f"\nOriginal error: {e}"
     )
+    
+    # Only show original error if it's not about setuptools
+    # (setuptools errors are typically secondary issues from nimporter internals)
+    if "setuptools" not in str(e):
+        error_msg += f"\nOriginal error: {e}"
+    
     raise ImportError(error_msg) from e
