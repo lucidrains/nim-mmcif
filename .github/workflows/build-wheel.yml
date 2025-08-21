@@ -26,10 +26,6 @@ jobs:
         with:
           nim-version: "stable"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Bdist wheel
-        run: |
-          python setup.py 
 
       - name: Install Nim dependencies
         run: /home/runner/work/nim-mmcif/nim-mmcif/.nim_runtime/bin/nimble install -d
