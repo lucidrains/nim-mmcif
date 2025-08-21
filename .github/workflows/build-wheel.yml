@@ -27,27 +27,15 @@ jobs:
           nim-version: "stable"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Add Nimble Path
+      - name: Bdist wheel
         run: |
-          echo "$(dirname $(which nim))" >> $GITHUB_PATH
-          echo $PATH
-          which nimble
+          python setup.py 
 
       - name: Install Nim dependencies
         run: /home/runner/work/nim-mmcif/nim-mmcif/.nim_runtime/bin/nimble install -d
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v3.1.4
-        env:
-          CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-* cp312-*"
-          CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux*"
-          CIBW_ARCHS_LINUX: x86_64
-          CIBW_ARCHS_MACOS: x86_64 arm64
-          CIBW_ARCHS_WINDOWS: AMD64
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: "auditwheel repair -w {dest_dir} {wheel}"
-          CIBW_REPAIR_WHEEL_COMMAND_MACOS: "delocate-wheel -w {dest_dir} {wheel}"
-          CIBW_BEFORE_BUILD: "nimble buildPythonModule"
-          CIBW_ENVIRONMENT: 'PATH="$PATH"'
+        run: pip -m build .
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
