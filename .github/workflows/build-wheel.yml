@@ -36,13 +36,8 @@ jobs:
       - name: Install Nim dependencies
         run: /home/runner/work/nim-mmcif/nim-mmcif/.nim_runtime/bin/nimble install -d
 
-      - name: Install Python build dependencies
-        run: |
-          pip install --upgrade pip
-          pip install cibuildwheel
-      
       - name: Build wheels
-        run: cibuildwheel --output-dir wheelhouse
+        uses: pypa/cibuildwheel@v3.1.4
         env:
           CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-* cp312-*"
           CIBW_SKIP: "*-win32 *-manylinux_i686 *-musllinux*"
