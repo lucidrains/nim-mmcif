@@ -28,7 +28,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Nim dependencies
-        run: /home/runner/work/nim-mmcif/nim-mmcif/.nim_runtime/bin/nimble install -d
+        run: nimble install -d
 
       - name: Build wheels
         run: |
