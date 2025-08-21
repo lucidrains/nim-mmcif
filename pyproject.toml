@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=61.0", "wheel", "nimporter>=1.1.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -12,7 +12,9 @@ authors = [
     {name = "lucidrains", email = "lucidrains@gmail.com"}
 ]
 requires-python = ">=3.8"
-dependencies = []
+dependencies = [
+    "nimporter>=1.1.0"
+]
 
 keywords = [
     "mmcif",
@@ -59,19 +61,16 @@ test = [
 packages = ["nim_mmcif"]
 license-files = ["LICENSE"]
 
-[tool.setuptools.package-dir]
-nim_mmcif = "python_wrapper"
-
 [tool.setuptools.package-data]
 nim_mmcif = [
+    "*.nim",
     "*.so",
     "*.dylib",
     "*.pyd",
     "*.dll",
     "*.cpython-*.so",
     "*.cpython-*.dylib",
-    "*.cp*-*.pyd",
-    "platform_modules/**/*"
+    "*.cp*-*.pyd"
 ]
 
 [tool.pytest.ini_options]

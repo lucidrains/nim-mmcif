@@ -1,0 +1,17 @@
+# NIMPORTER BUNDLE
+include nim-extensions/tests.test/nimbase.h
+include nim-extensions/nim_mmcif/nimbase.h
+include nim-extensions/src.python_bindings/nimbase.h
+include nim-extensions/src.mmcif/nimbase.h
+include nim-extensions/tests.test/nimbase.h
+include nim-extensions/nim_mmcif/nimbase.h
+include nim-extensions/src.python_bindings/nimbase.h
+include nim-extensions/src.mmcif/nimbase.h
+include nim-extensions/tests.test/nimbase.h
+include nim-extensions/nim_mmcif/nimbase.h
+include nim-extensions/src.python_bindings/nimbase.h
+include nim-extensions/src.mmcif/nimbase.h
+include nim-extensions/tests.test/nimbase.h
+include nim-extensions/nim_mmcif/nimbase.h
+include nim-extensions/src.python_bindings/nimbase.h
+include nim-extensions/src.mmcif/nimbase.h
