@@ -58,6 +58,7 @@ test = [
 
 [tool.setuptools]
 packages = ["nim_mmcif"]
+license-files = []
 
 [tool.setuptools.package-dir]
 nim_mmcif = "python_wrapper"
