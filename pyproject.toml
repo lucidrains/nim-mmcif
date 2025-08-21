@@ -1,5 +1,11 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel", "nimporter>=1.1.0"]
+requires = [
+    "setuptools>=61.0",
+    "wheel",
+    "nimporter>=1.1.0",
+    "cython>=0.29.30; python_version < '3.12'",
+    "cython>=3.0.0; python_version >= '3.12'"
+]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -33,6 +39,8 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
@@ -40,6 +48,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Other",
+    "Programming Language :: Other :: Nim",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Chemistry",
     "Topic :: Software Development :: Libraries :: Python Modules"
@@ -47,6 +56,8 @@ classifiers = [
 
 [project.urls]
 "Homepage" = "https://github.com/lucidrains/nim-mmcif"
+"Bug Tracker" = "https://github.com/lucidrains/nim-mmcif/issues"
+"Source Code" = "https://github.com/lucidrains/nim-mmcif"
 
 [project.optional-dependencies]
 dev = [
@@ -62,13 +73,16 @@ packages = ["nim_mmcif"]
 [tool.setuptools.package-data]
 nim_mmcif = [
     "*.nim",
+    "*.nimble",
+    "*.cfg",
     "*.so",
     "*.dylib",
     "*.pyd",
     "*.dll",
     "*.cpython-*.so",
     "*.cpython-*.dylib",
-    "*.cp*-*.pyd"
+    "*.cp*-*.pyd",
+    "py.typed"
 ]
 
 [tool.pytest.ini_options]

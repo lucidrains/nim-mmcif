@@ -1,17 +1,29 @@
-# NIMPORTER BUNDLE
-include nim-extensions/tests.test/nimbase.h
-include nim-extensions/nim_mmcif/nimbase.h
-include nim-extensions/src.python_bindings/nimbase.h
-include nim-extensions/src.mmcif/nimbase.h
-include nim-extensions/tests.test/nimbase.h
-include nim-extensions/nim_mmcif/nimbase.h
-include nim-extensions/src.python_bindings/nimbase.h
-include nim-extensions/src.mmcif/nimbase.h
-include nim-extensions/tests.test/nimbase.h
-include nim-extensions/nim_mmcif/nimbase.h
-include nim-extensions/src.python_bindings/nimbase.h
-include nim-extensions/src.mmcif/nimbase.h
-include nim-extensions/tests.test/nimbase.h
-include nim-extensions/nim_mmcif/nimbase.h
-include nim-extensions/src.python_bindings/nimbase.h
-include nim-extensions/src.mmcif/nimbase.h
+include README.md
+include LICENSE
+include pyproject.toml
+include setup.py
+include mmcif.nimble
+include build_nim.py
+
+# Include all Nim source files
+recursive-include nim_mmcif *.nim *.nimble *.cfg *.nim.cfg
+recursive-include src *.nim
+recursive-include tests *.nim *.mmcif *.py *.nims
+
+# Include nimbase headers from nim-extensions
+recursive-include nim-extensions *.h *.c *.json
+
+# Include any compiled extensions (for binary wheels)
+recursive-include nim_mmcif *.so *.dylib *.pyd *.dll
+recursive-include nim_mmcif *.cpython-*.so *.cpython-*.dylib *.cp*-*.pyd
+
+# Exclude build artifacts
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude *~
+global-exclude *.swp
+global-exclude .DS_Store
+recursive-exclude dist *
+recursive-exclude *.egg-info *
+recursive-exclude wheelhouse *
+recursive-exclude build *
