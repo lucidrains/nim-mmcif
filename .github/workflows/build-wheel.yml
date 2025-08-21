@@ -35,7 +35,7 @@ jobs:
         run: /home/runner/work/nim-mmcif/nim-mmcif/.nim_runtime/bin/nimble install -d
 
       - name: Build wheels
-        run: pip -m build .
+        run: python -m build .
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
