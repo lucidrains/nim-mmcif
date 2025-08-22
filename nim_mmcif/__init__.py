@@ -45,7 +45,22 @@ try:
     
 except ImportError as e:
     _import_error = e
-    # Pre-compiled extension not found, try nimporter as fallback
+    # Pre-compiled extension not found
+    # Check if this is a placeholder build (CI without Nim)
+    placeholder_marker = Path(__file__).parent / '.placeholder_extension'
+    if placeholder_marker.exists():
+        # This is a placeholder build - extension compilation failed during wheel building
+        error_msg = (
+            f"Failed to import nim_mmcif extension: {_import_error}\n\n"
+            "This wheel was built without a properly compiled Nim extension.\n"
+            "This is likely a CI/build environment issue.\n\n"
+            "To fix this:\n"
+            "1. Install from source with Nim compiler available\n"
+            "2. Or wait for a properly built wheel to be published\n"
+        )
+        raise ImportError(error_msg) from e
+    
+    # Try nimporter as fallback for source installations
     try:
         # First check if setuptools is available (required by nimporter)
         try:
@@ -55,11 +70,6 @@ except ImportError as e:
                 "setuptools is required but not installed. "
                 "Please install it with: pip install setuptools"
             )
-        
-        # Check if we have a placeholder extension (created during CI build without Nim)
-        placeholder_marker = Path(__file__).parent / '.placeholder_extension'
-        if placeholder_marker.exists():
-            print("Note: nim-mmcif was built without Nim compiler. Runtime compilation will be attempted.")
         
         # Enable nimporter to compile and import .nim files
         import nimporter

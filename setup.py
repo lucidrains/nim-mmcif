@@ -75,7 +75,35 @@ class NimBuildExt(build_ext):
         if platform.system() == 'Windows':
             # Debug: List C:\ contents in CI
             if os.environ.get('CI'):
-                print("Debug: Checking C:\\ directory contents...")
+                print("Debug: Checking for Nim in CI environment...")
+                print(f"Current PATH: {os.environ.get('PATH', 'NOT SET')}")
+                
+                # Check if nim is already in PATH but with .exe extension
+                try:
+                    result = subprocess.run(
+                        ['nim.exe', '--version'],
+                        capture_output=True,
+                        text=True,
+                        check=True
+                    )
+                    print(f"Found nim.exe in PATH: {result.stdout.splitlines()[0]}")
+                    return True
+                except (subprocess.CalledProcessError, FileNotFoundError):
+                    pass
+                
+                # Check for cmd wrapper
+                try:
+                    result = subprocess.run(
+                        ['cmd', '/c', 'nim', '--version'],
+                        capture_output=True,
+                        text=True,
+                        check=True
+                    )
+                    print(f"Found Nim via cmd: {result.stdout.splitlines()[0]}")
+                    return True
+                except (subprocess.CalledProcessError, FileNotFoundError):
+                    pass
+                
                 try:
                     import glob
                     dirs = glob.glob('C:\\*')
@@ -105,7 +133,7 @@ class NimBuildExt(build_ext):
                         print(f"Found Nim at {nim_path}: {result.stdout.splitlines()[0]}")
                         # Add to PATH for this process and child processes
                         nim_bin_dir = os.path.dirname(nim_path)
-                        os.environ['PATH'] = nim_bin_dir + ';' + os.environ.get('PATH', '')
+                        os.environ['PATH'] = nim_bin_dir + os.pathsep + os.environ.get('PATH', '')
                         # Also set for subprocess calls
                         os.environ['NIM_PATH'] = nim_path
                         os.environ['NIMBLE_PATH'] = os.path.join(nim_bin_dir, 'nimble.exe')
@@ -200,8 +228,12 @@ class NimBuildExt(build_ext):
         
         try:
             # Base command - use the discovered Nim path on Windows if available
-            if platform.system() == 'Windows' and os.environ.get('NIM_PATH'):
-                cmd = [os.environ['NIM_PATH'], 'c', '--app:lib']
+            if platform.system() == 'Windows':
+                if os.environ.get('NIM_PATH'):
+                    cmd = [os.environ['NIM_PATH'], 'c', '--app:lib']
+                else:
+                    # Try both nim and nim.exe
+                    cmd = ['nim.exe', 'c', '--app:lib']
             else:
                 cmd = ['nim', 'c', '--app:lib']
             
@@ -252,13 +284,8 @@ class NimBuildExt(build_ext):
                 output_file = 'nim_mmcif.pyd'
                 
                 # Add Windows-specific flags
-                # Try to use Visual Studio compiler if available
-                if os.path.exists('C:/Program Files/Microsoft Visual Studio') or \
-                   os.path.exists('C:/Program Files (x86)/Microsoft Visual Studio'):
-                    cmd.append('--cc:vcc')
-                else:
-                    # Use MinGW if available
-                    cmd.append('--cc:gcc')
+                # Use gcc for Windows builds (MinGW is available in cibuildwheel)
+                cmd.append('--cc:gcc')
             
             else:
                 print(f"WARNING: Unknown platform {system}, using defaults")
