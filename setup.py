@@ -389,8 +389,16 @@ class NimBuildExt(build_ext):
                     # Use static runtime to avoid DLL dependencies
                     cmd.append('--passL:-static-libgcc')
                     cmd.append('--passL:-static-libstdc++')
+                    # Add Windows system libraries that may be needed
+                    cmd.append('--passL:-lmsvcrt')
+                    cmd.append('--passL:-lkernel32')
+                    cmd.append('--passL:-luser32')
+                    # Link statically with pthread if needed
+                    cmd.append('--passL:-static -lpthread')
                     # Ensure we're building a Python extension module
                     cmd.append('--passL:-Wl,--export-all-symbols')
+                    # Add subsystem flag for DLL
+                    cmd.append('--passL:-Wl,--subsystem,windows')
                     # Link against Python library for MinGW
                     python_home = sys.prefix
                     # Try to find python DLL in common locations
@@ -484,7 +492,33 @@ class NimBuildExt(build_ext):
                         print("DLL verification passed - extension is loadable")
                     except Exception as e:
                         print(f"WARNING: DLL verification failed: {e}")
-                        print("This may indicate an architecture mismatch")
+                        print("This may indicate an architecture mismatch or missing dependencies")
+                        
+                        # Try to get more information about the error
+                        if "specified module could not be found" in str(e).lower():
+                            print("The DLL has missing dependencies.")
+                            print("Common causes:")
+                            print("  1. Missing Visual C++ runtime libraries")
+                            print("  2. Missing MinGW runtime DLLs (libgcc, libstdc++)")
+                            print("  3. Architecture mismatch (32-bit vs 64-bit)")
+                            
+                            # Try using dumpbin or objdump if available to check dependencies
+                            try:
+                                # Try objdump first (comes with MinGW)
+                                dep_result = subprocess.run(
+                                    ['objdump', '-p', str(pyd_path)],
+                                    capture_output=True,
+                                    text=True,
+                                    timeout=5
+                                )
+                                if dep_result.returncode == 0:
+                                    # Extract DLL dependencies
+                                    import re
+                                    dll_deps = re.findall(r'DLL Name: (\S+)', dep_result.stdout)
+                                    if dll_deps:
+                                        print(f"DLL Dependencies found: {dll_deps}")
+                            except:
+                                pass
                     
                     # Set an attribute so build_ext knows the extension was built
                     self.nim_extension_built = True

@@ -132,8 +132,16 @@ def build_nim_extension(system, machine):
             # Use static runtime to avoid DLL dependencies
             cmd.append('--passL:-static-libgcc')
             cmd.append('--passL:-static-libstdc++')
+            # Add Windows system libraries
+            cmd.append('--passL:-lmsvcrt')
+            cmd.append('--passL:-lkernel32')
+            cmd.append('--passL:-luser32')
+            # Link statically with pthread if needed
+            cmd.append('--passL:-static -lpthread')
             # Export all symbols for Python
             cmd.append('--passL:-Wl,--export-all-symbols')
+            # Add subsystem flag for DLL
+            cmd.append('--passL:-Wl,--subsystem,windows')
         
         cmd.append('--out:nim_mmcif.pyd')
     
