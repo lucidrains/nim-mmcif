@@ -51,7 +51,14 @@ def build():
     elif system == 'Linux':
         cmd.extend(['--cc:gcc', '--passL:-fPIC', '--out:nim_mmcif.so'])
     elif system == 'Windows':
-        cmd.extend(['--cc:gcc', '--out:nim_mmcif.pyd'])
+        # Use static linking to avoid DLL dependency issues
+        cmd.extend([
+            '--cc:gcc',
+            '--out:nim_mmcif.pyd',
+            '--passL:-static',
+            '--passL:-static-libgcc',
+            '--passL:-static-libstdc++'
+        ])
     else:
         cmd.append('--out:nim_mmcif.so')
     

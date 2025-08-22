@@ -46,7 +46,7 @@ try:
                 )
     
     if ext_path.exists():
-        # On Windows, we might need to handle DLL loading more carefully
+        # On Windows, we need to handle DLL loading more carefully
         if platform.system() == 'Windows':
             # Windows sometimes needs help finding dependent DLLs
             # Add the package directory to DLL search path
@@ -56,15 +56,30 @@ try:
             # For Python 3.8+, use os.add_dll_directory if available
             if hasattr(os, 'add_dll_directory'):
                 try:
-                    os.add_dll_directory(str(package_dir))
+                    with os.add_dll_directory(str(package_dir)):
+                        # Load within the context manager
+                        pass
                 except Exception as dll_err:
-                    print(f"Warning: Could not add DLL directory: {dll_err}")
+                    # Ignore errors, will try other methods
+                    pass
             
             # Also try adding to PATH temporarily
             old_path = os.environ.get('PATH', '')
             try:
                 os.environ['PATH'] = str(package_dir) + os.pathsep + old_path
             except Exception:
+                pass
+            
+            # On Windows, also try to set up ctypes CDLL loading
+            try:
+                import ctypes
+                # Pre-load any required system libraries
+                # This helps when the extension has dependencies
+                try:
+                    ctypes.CDLL('msvcrt.dll')
+                except:
+                    pass
+            except:
                 pass
         
         # Load the extension directly using importlib

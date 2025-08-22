@@ -102,7 +102,14 @@ class NimBuildExt(build_ext):
                 cmd.extend(['--cc:gcc', '--passL:-fPIC', f'--out:{output_file}'])
             elif system == 'Windows':
                 output_file = 'nim_mmcif.pyd'
-                cmd.extend(['--cc:gcc', f'--out:{output_file}'])
+                # Use static linking to avoid DLL dependency issues
+                cmd.extend([
+                    '--cc:gcc',
+                    f'--out:{output_file}',
+                    '--passL:-static',
+                    '--passL:-static-libgcc',
+                    '--passL:-static-libstdc++'
+                ])
             else:
                 output_file = 'nim_mmcif.so'
                 cmd.append(f'--out:{output_file}')
