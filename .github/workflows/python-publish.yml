@@ -153,10 +153,7 @@ jobs:
             python -c "import sys; import os; libs_dir = os.path.join(sys.prefix, 'libs'); print(f'Python libs directory: {libs_dir}'); import os; print('Contents:', os.listdir(libs_dir) if os.path.exists(libs_dir) else 'Not found')"
             echo Building Nim extension for Windows using setuptools
             cd {project}
-            set NIM_PATH=C:\nim-2.2.4\bin\nim.exe
-            set NIMBLE_PATH=C:\nim-2.2.4\bin\nimble.exe
-            set CI=1
-            python setup.py build_ext --inplace
+            python -c "import os; os.environ['NIM_PATH'] = r'C:\nim-2.2.4\bin\nim.exe'; os.environ['NIMBLE_PATH'] = r'C:\nim-2.2.4\bin\nimble.exe'; os.environ['CI'] = '1'; os.environ['PATH'] = r'C:\nim-2.2.4\bin;C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin;' + os.environ.get('PATH', ''); import subprocess; subprocess.run(['python', 'setup.py', 'build_ext', '--inplace'], check=True)"
             echo Checking for built extensions:
             dir nim_mmcif\*.pyd
             dir nim_mmcif\*.dll

@@ -68,10 +68,16 @@ class NimBuildExt(build_ext):
             # Put CI path first since that's what we're using
             possible_paths = [
                 r'C:\nim-2.2.4\bin\nim.exe',  # CI installation path (CHECK THIS FIRST!)
+                r'C:\nim-2.2.4\finish.exe',  # Sometimes nim.exe gets renamed during extraction
                 r'C:\tools\nim\bin\nim.exe',  # Chocolatey installation
                 r'C:\Program Files\nim\bin\nim.exe',
                 os.path.expanduser(r'~\.nimble\bin\nim.exe'),  # User installation
             ]
+            
+            # First check if NIM_PATH environment variable is set (from CI)
+            nim_path_env = os.environ.get('NIM_PATH')
+            if nim_path_env and os.path.exists(nim_path_env):
+                possible_paths.insert(0, nim_path_env)
             
             for nim_path in possible_paths:
                 if os.path.exists(nim_path):
@@ -111,6 +117,8 @@ class NimBuildExt(build_ext):
             if os.environ.get('CI'):
                 print("DEBUG: Nim not found in expected locations in CI!")
                 print(f"Current PATH: {os.environ.get('PATH', 'NOT SET')}")
+                print(f"NIM_PATH env var: {os.environ.get('NIM_PATH', 'NOT SET')}")
+                print(f"NIMBLE_PATH env var: {os.environ.get('NIMBLE_PATH', 'NOT SET')}")
                 print("Checking C:\\ for nim directories...")
                 try:
                     import glob
@@ -123,6 +131,16 @@ class NimBuildExt(build_ext):
                         matches = glob.glob(pattern)
                         if matches:
                             print(f"Found: {matches}")
+                            # Check if nim.exe exists in any of these directories
+                            for match in matches:
+                                nim_exe = os.path.join(match, 'bin', 'nim.exe')
+                                if os.path.exists(nim_exe):
+                                    print(f"  nim.exe found at: {nim_exe}")
+                                else:
+                                    # Check if nim.exe is directly in the directory
+                                    nim_exe_direct = os.path.join(match, 'nim.exe')
+                                    if os.path.exists(nim_exe_direct):
+                                        print(f"  nim.exe found at: {nim_exe_direct}")
                 except Exception as e:
                     print(f"Could not search directories: {e}")
         
