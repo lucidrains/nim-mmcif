@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
 
 # Version information
-__version__ = '0.0.9'
+__version__ = '0.0.10'
 
 # First, try to import the pre-compiled extension directly
 mmcif = None
@@ -46,12 +46,64 @@ try:
                 )
     
     if ext_path.exists():
+        # On Windows, we need to handle DLL loading more carefully
+        if platform.system() == 'Windows':
+            # Windows sometimes needs help finding dependent DLLs
+            # Add the package directory to DLL search path
+            import os
+            package_dir = Path(__file__).parent
+            
+            # For Python 3.8+, use os.add_dll_directory if available
+            if hasattr(os, 'add_dll_directory'):
+                try:
+                    with os.add_dll_directory(str(package_dir)):
+                        # Load within the context manager
+                        pass
+                except Exception as dll_err:
+                    # Ignore errors, will try other methods
+                    pass
+            
+            # Also try adding to PATH temporarily
+            old_path = os.environ.get('PATH', '')
+            try:
+                os.environ['PATH'] = str(package_dir) + os.pathsep + old_path
+            except Exception:
+                pass
+            
+            # On Windows, also try to set up ctypes CDLL loading
+            try:
+                import ctypes
+                # Pre-load any required system libraries
+                # This helps when the extension has dependencies
+                try:
+                    ctypes.CDLL('msvcrt.dll')
+                except:
+                    pass
+            except:
+                pass
+        
         # Load the extension directly using importlib
         spec = importlib.util.spec_from_file_location("nim_mmcif_ext", ext_path)
         if spec and spec.loader:
             mmcif = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mmcif)
-            # print(f"Successfully loaded pre-compiled extension from {ext_path}")
+            try:
+                spec.loader.exec_module(mmcif)
+                # print(f"Successfully loaded pre-compiled extension from {ext_path}")
+            except ImportError as load_err:
+                # On Windows, provide more detailed error information
+                if platform.system() == 'Windows' and "DLL load failed" in str(load_err):
+                    error_msg = (
+                        f"Failed to load Windows extension: {load_err}\n\n"
+                        "This is typically caused by missing runtime dependencies.\n"
+                        "The extension was compiled but cannot find required DLLs.\n\n"
+                        "Possible solutions:\n"
+                        "1. Install Visual C++ Redistributable for Visual Studio\n"
+                        "2. Ensure the wheel was built with static linking\n"
+                        "3. Install from source with Nim compiler available\n"
+                    )
+                    raise ImportError(error_msg) from load_err
+                else:
+                    raise
         else:
             raise ImportError(f"Could not create module spec for {ext_path}")
     else:
