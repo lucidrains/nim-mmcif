@@ -108,11 +108,13 @@ jobs:
           CIBW_BEFORE_BUILD_WINDOWS: |
             python -m pip install --upgrade pip setuptools wheel
             python -m pip install nimporter>=1.1.0
-            echo "Nim path check:"
-            C:\nim-2.2.4\bin\nim --version
-            echo "Building Nim extension for Windows"
+            echo Setting Nim PATH for Windows
             set PATH=C:\nim-2.2.4\bin;%PATH%
-            cd {project} && python setup.py build_ext --inplace
+            echo Nim path check:
+            where nim || echo nim not found in PATH
+            C:\nim-2.2.4\bin\nim --version
+            echo Building Nim extension for Windows
+            cd {project} && set PATH=C:\nim-2.2.4\bin;%PATH% && python setup.py build_ext --inplace
           # Test imports
           CIBW_TEST_COMMAND: |
             python -c "import nim_mmcif; print(f'nim_mmcif version: {nim_mmcif.__version__}')"
