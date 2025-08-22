@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
 
 # Version information
-__version__ = '0.0.10'
+from ._version import __version__
 
 # First, try to import the pre-compiled extension directly
 mmcif = None
