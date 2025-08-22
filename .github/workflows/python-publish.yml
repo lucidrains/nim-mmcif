@@ -69,13 +69,12 @@ jobs:
           CIBW_ARCHS_MACOS: "x86_64 arm64"
           CIBW_ARCHS_WINDOWS: "AMD64"
           # Linux setup
-          CIBW_BEFORE_ALL_LINUX: |
-            yum install -y wget || apt-get update && apt-get install -y wget
-            curl https://nim-lang.org/choosenim/init.sh -sSf | sh -s -- -y
-            export PATH=$HOME/.nimble/bin:$PATH
-            echo "$HOME/.nimble/bin" >> $GITHUB_PATH
-            nim --version
-            nimble install nimpy -y
+          CIBW_BEFORE_ALL_LINUX: >
+            (yum install -y wget || (apt-get update && apt-get install -y wget)) &&
+            curl https://nim-lang.org/choosenim/init.sh -sSf | sh -s -- -y &&
+            export PATH=$HOME/.nimble/bin:$PATH &&
+            $HOME/.nimble/bin/nim --version &&
+            $HOME/.nimble/bin/nimble install nimpy -y
           # macOS setup
           CIBW_BEFORE_ALL_MACOS: |
             brew install nim
