@@ -70,7 +70,6 @@ jobs:
           CIBW_ARCHS_WINDOWS: "AMD64"
           # Linux setup
           CIBW_BEFORE_ALL_LINUX: >
-            (yum install -y wget || (apt-get update && apt-get install -y wget)) &&
             curl https://nim-lang.org/choosenim/init.sh -sSf | sh -s -- -y &&
             export PATH=$HOME/.nimble/bin:$PATH &&
             $HOME/.nimble/bin/nim --version &&
@@ -96,8 +95,8 @@ jobs:
             python -c "from nim_mmcif import parse_mmcif; print('parse_mmcif imported successfully')"
           # Build settings
           CIBW_BUILD_VERBOSITY: 1
-          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-          CIBW_MANYLINUX_I686_IMAGE: manylinux2014
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+          CIBW_MANYLINUX_I686_IMAGE: manylinux_2_28
       
       - name: Check wheels with twine
         run: |
