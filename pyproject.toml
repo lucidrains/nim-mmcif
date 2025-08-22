@@ -70,6 +70,7 @@ test = [
 
 [tool.setuptools]
 packages = ["nim_mmcif"]
+license-files = []
 
 [tool.setuptools.package-data]
 nim_mmcif = [
