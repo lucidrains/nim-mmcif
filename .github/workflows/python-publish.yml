@@ -239,5 +239,5 @@ jobs:
         if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.test_pypi != 'true')
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          skip-existing: true
-          verbose: true
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
