@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
 
 # Version information
-__version__ = '0.0.8'
+__version__ = '0.0.9'
 
 # First, try to import the pre-compiled extension directly
 mmcif = None
@@ -15,20 +15,33 @@ _import_error = None
 try:
     # Try direct import of the compiled extension
     # This should work if the extension was pre-compiled during wheel building
-    if platform.system() == 'Windows':
-        # On Windows, try to import the .pyd file directly
-        try:
-            # Try importing as a regular Python extension module
-            from . import nim_mmcif as mmcif
-        except ImportError:
-            # If that fails, try the alternative import path
-            import nim_mmcif.nim_mmcif as mmcif
-    else:
-        # On Unix-like systems, import the .so file
-        from . import nim_mmcif as mmcif
+    # The extension is compiled as nim_mmcif.pyd (Windows) or nim_mmcif.so (Unix)
+    # and placed in the nim_mmcif package directory
     
-    # Success message (can be removed in production)
-    # print("Successfully imported pre-compiled nim_mmcif extension")
+    # Use importlib to dynamically load the extension module
+    import importlib.util
+    import os
+    
+    # Determine the extension filename based on platform
+    if platform.system() == 'Windows':
+        ext_name = 'nim_mmcif.pyd'
+    else:
+        ext_name = 'nim_mmcif.so'
+    
+    # Full path to the extension
+    ext_path = Path(__file__).parent / ext_name
+    
+    if ext_path.exists():
+        # Load the extension directly using importlib
+        spec = importlib.util.spec_from_file_location("nim_mmcif_ext", ext_path)
+        if spec and spec.loader:
+            mmcif = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mmcif)
+            # print(f"Successfully loaded pre-compiled extension from {ext_path}")
+        else:
+            raise ImportError(f"Could not create module spec for {ext_path}")
+    else:
+        raise ImportError(f"Extension file not found: {ext_path}")
     
 except ImportError as e:
     _import_error = e
@@ -52,9 +65,8 @@ except ImportError as e:
         import nimporter
 
         # Import the Nim module via nimporter
-        # Note: nimporter.build_nim_extensions() is only needed during setup/build,
-        # not at runtime. The import hooks are automatically installed when nimporter is imported.
-        import nim_mmcif.nim_mmcif as mmcif
+        # This will compile nim_mmcif.nim on the fly if needed
+        from . import nim_mmcif as mmcif
         
     except ImportError as nimporter_error:
         # If both methods fail, provide a helpful error message
