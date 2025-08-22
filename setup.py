@@ -16,12 +16,23 @@ class NimBuildExt(build_ext):
         if not self.check_nim_installed():
             print("WARNING: Nim compiler not found!")
             print("Nim should be pre-installed in the build environment.")
-        
-        # Ensure nimpy is installed
-        self.ensure_nimpy()
-        
-        # Build the Nim extension
-        self.build_nim_extension()
+            print("Attempting to continue with pre-built binary or fallback...")
+            # Check if a pre-built binary exists
+            if not self.check_prebuilt_binary():
+                print("ERROR: No pre-built binary found and Nim compiler not available")
+                print("Please install Nim: https://nim-lang.org/install.html")
+                # For CI/CD environments, we should fail here
+                if os.environ.get('CI'):
+                    raise RuntimeError("Nim compiler not found in CI environment")
+        else:
+            # Ensure nimpy is installed
+            self.ensure_nimpy()
+            
+            # Build the Nim extension
+            if not self.build_nim_extension():
+                print("WARNING: Nim build failed, checking for pre-built binary...")
+                if not self.check_prebuilt_binary():
+                    raise RuntimeError("Failed to build Nim extension and no pre-built binary found")
         
         # Run the parent build_ext
         super().run()
@@ -39,6 +50,26 @@ class NimBuildExt(build_ext):
             return True
         except (subprocess.CalledProcessError, FileNotFoundError):
             return False
+    
+    def check_prebuilt_binary(self):
+        """Check if a pre-built binary exists."""
+        system = platform.system()
+        
+        if system == 'Darwin':  # macOS
+            binary_name = 'nim_mmcif.so'
+        elif system == 'Linux':
+            binary_name = 'nim_mmcif.so'
+        elif system == 'Windows':
+            binary_name = 'nim_mmcif.pyd'
+        else:
+            binary_name = 'nim_mmcif.so'
+        
+        binary_path = Path('nim_mmcif') / binary_name
+        if binary_path.exists():
+            print(f"Found pre-built binary: {binary_path}")
+            return True
+        
+        return False
     
     def ensure_nimpy(self):
         """Ensure nimpy is installed."""

@@ -72,9 +72,11 @@ jobs:
           # Linux setup - use pre-built binaries for manylinux compatibility
           CIBW_BEFORE_ALL_LINUX: >
             yum install -y wget tar xz &&
+            cd /opt &&
             wget -q https://nim-lang.org/download/nim-2.2.4-linux_x64.tar.xz &&
             tar -xf nim-2.2.4-linux_x64.tar.xz &&
-            export PATH=$PWD/nim-2.2.4/bin:$PATH &&
+            ln -s /opt/nim-2.2.4/bin/nim /usr/local/bin/nim &&
+            ln -s /opt/nim-2.2.4/bin/nimble /usr/local/bin/nimble &&
             nim --version &&
             nimble install nimpy -y
           # macOS setup
@@ -92,6 +94,9 @@ jobs:
           CIBW_BEFORE_BUILD_LINUX: |
             pip install --upgrade pip setuptools wheel
             pip install nimporter>=1.1.0
+            echo "Nim version check:"
+            which nim || echo "nim not in PATH"
+            nim --version || echo "nim command failed"
             echo "Building Nim extension for Linux"
             cd {project} && python setup.py build_ext --inplace
           CIBW_BEFORE_BUILD_MACOS: |
