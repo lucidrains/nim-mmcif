@@ -87,23 +87,23 @@ jobs:
             nim --version
             nimble install nimpy -y
             echo "Host architecture: $(uname -m)"
-          # Windows setup - download and extract Nim directly
+          # Windows setup - install Nim using Scoop
           CIBW_BEFORE_ALL_WINDOWS: |
-            curl -L https://nim-lang.org/download/nim-2.2.4_x64.zip -o nim.zip
-            7z x nim.zip -oC:\
-            C:\nim-2.2.4\bin\nim --version
-            C:\nim-2.2.4\bin\nimble install nimpy -y
-            echo Installing MinGW-w64 for 64-bit builds...
-            choco install mingw --version=11.2.0 -y --force
-            echo Refreshing environment...
-            refreshenv
-            echo Checking for GCC after installation...
-            where gcc || echo GCC still not in PATH
-            echo Adding MinGW to PATH manually...
-            set PATH=C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin;%PATH%
-            echo PATH=%PATH%
+            echo Installing Scoop...
+            powershell -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"
+            powershell -Command "irm get.scoop.sh | iex"
+            echo Adding Scoop to PATH...
+            set PATH=%USERPROFILE%\scoop\shims;%PATH%
+            echo Installing Nim with Scoop...
+            scoop install nim
+            echo Verifying Nim installation...
+            nim --version
+            nimble --version
+            echo Installing nimpy...
+            nimble install nimpy -y
+            echo Checking GCC from Nim installation...
+            where gcc || echo GCC not in PATH
             gcc --version || echo GCC not available
-            echo Checking GCC architecture...
             gcc -dumpmachine || echo Could not get GCC target
           # Common build requirements for Linux/macOS
           CIBW_BEFORE_BUILD_LINUX: |
@@ -133,16 +133,12 @@ jobs:
             python -m pip install --upgrade pip setuptools wheel
             python -m pip install nimporter>=1.1.0
             echo Setting up build environment for Windows
-            set PATH=C:\nim-2.2.4\bin;C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin;%PATH%
-            set NIM_PATH=C:\nim-2.2.4\bin\nim.exe
-            set NIMBLE_PATH=C:\nim-2.2.4\bin\nimble.exe
+            set PATH=%USERPROFILE%\scoop\shims;%PATH%
             set CI=1
             echo Updated PATH=%PATH%
-            echo NIM_PATH=%NIM_PATH%
-            echo NIMBLE_PATH=%NIMBLE_PATH%
             echo Nim path check:
             where nim || echo nim not found in PATH
-            C:\nim-2.2.4\bin\nim --version
+            nim --version
             echo Checking for available compilers:
             where gcc || echo GCC not found
             gcc --version || echo GCC version check failed
