@@ -24,31 +24,96 @@ class NimBuildExt(build_ext):
     
     def check_nim_installed(self):
         """Check if Nim compiler is installed."""
-        try:
-            result = subprocess.run(
-                ['nim', '--version'],
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            print(f"Found Nim: {result.stdout.splitlines()[0]}")
-            return True
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            return False
+        # Try different possible nim locations
+        nim_commands = ['nim']
+        
+        # Add Windows-specific paths if on Windows
+        if platform.system() == 'Windows':
+            # Check environment variables for CI builds
+            nim_path = os.environ.get('NIM_PATH')
+            if nim_path:
+                nim_commands.insert(0, nim_path)
+            
+            # Common Windows Nim installation paths
+            nim_commands.extend([
+                r'C:\nim-2.2.4\bin\nim.exe',
+                r'C:\nim\bin\nim.exe',
+                r'C:\tools\nim\bin\nim.exe',
+            ])
+        
+        for nim_cmd in nim_commands:
+            try:
+                # On Windows, use shell=True to properly resolve PATH
+                use_shell = platform.system() == 'Windows' and nim_cmd == 'nim'
+                result = subprocess.run(
+                    [nim_cmd, '--version'] if not use_shell else f'{nim_cmd} --version',
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                    shell=use_shell
+                )
+                print(f"Found Nim at {nim_cmd}: {result.stdout.splitlines()[0]}")
+                # Store the working nim command for later use
+                self.nim_cmd = nim_cmd
+                self.use_shell = use_shell
+                return True
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                continue
+        
+        print(f"Nim not found. Tried: {nim_commands}")
+        return False
     
     def ensure_nimpy(self):
         """Ensure nimpy is installed."""
         try:
+            # Find nimble command (similar to nim)
+            nimble_commands = ['nimble']
+            if platform.system() == 'Windows':
+                nimble_path = os.environ.get('NIMBLE_PATH')
+                if nimble_path:
+                    nimble_commands.insert(0, nimble_path)
+                nimble_commands.extend([
+                    r'C:\nim-2.2.4\bin\nimble.exe',
+                    r'C:\nim\bin\nimble.exe',
+                    r'C:\tools\nim\bin\nimble.exe',
+                ])
+            
+            nimble_cmd = None
+            use_shell = False
+            for cmd in nimble_commands:
+                try:
+                    use_shell = platform.system() == 'Windows' and cmd == 'nimble'
+                    subprocess.run(
+                        [cmd, '--version'] if not use_shell else f'{cmd} --version',
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                        shell=use_shell
+                    )
+                    nimble_cmd = cmd
+                    break
+                except (subprocess.CalledProcessError, FileNotFoundError):
+                    continue
+            
+            if not nimble_cmd:
+                print("Warning: nimble not found, skipping nimpy check")
+                return
+            
             result = subprocess.run(
-                ['nimble', 'list', '--installed'],
+                [nimble_cmd, 'list', '--installed'] if not use_shell else f'{nimble_cmd} list --installed',
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
+                shell=use_shell
             )
             
             if 'nimpy' not in result.stdout:
                 print("Installing nimpy...")
-                subprocess.run(['nimble', 'install', 'nimpy', '-y'], check=True)
+                subprocess.run(
+                    [nimble_cmd, 'install', 'nimpy', '-y'] if not use_shell else f'{nimble_cmd} install nimpy -y',
+                    check=True,
+                    shell=use_shell
+                )
                 print("nimpy installed successfully")
         except (subprocess.CalledProcessError, FileNotFoundError) as e:
             print(f"Warning: Could not check/install nimpy: {e}")
@@ -66,7 +131,11 @@ class NimBuildExt(build_ext):
         os.chdir(nim_dir)
         
         try:
-            cmd = ['nim', 'c', '--app:lib', '--opt:speed', '--threads:on']
+            # Use the nim command found during check_nim_installed
+            nim_cmd = getattr(self, 'nim_cmd', 'nim')
+            use_shell = getattr(self, 'use_shell', False)
+            
+            cmd = [nim_cmd, 'c', '--app:lib', '--opt:speed', '--threads:on']
             
             if system == 'Darwin':  # macOS
                 output_file = 'nim_mmcif.so'
@@ -116,8 +185,14 @@ class NimBuildExt(build_ext):
             
             cmd.append('nim_mmcif.nim')
             
-            print(f"Building: {' '.join(cmd)}")
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            # Convert to string if using shell
+            if use_shell:
+                cmd_str = ' '.join(cmd)
+                print(f"Building: {cmd_str}")
+                result = subprocess.run(cmd_str, capture_output=True, text=True, shell=True)
+            else:
+                print(f"Building: {' '.join(cmd)}")
+                result = subprocess.run(cmd, capture_output=True, text=True)
             
             if result.returncode != 0:
                 print(f"Build failed:\n{result.stderr}")
