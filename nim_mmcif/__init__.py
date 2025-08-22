@@ -118,7 +118,7 @@ try:
         'get_atom_positions'
     ]
 
-    __version__ = '0.0.5'
+    __version__ = '0.0.7'
 
 except ImportError as e:
     # Fallback error message if nimporter is not installed

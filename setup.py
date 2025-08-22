@@ -12,23 +12,19 @@ class NimBuildExt(build_ext):
     """Custom build extension for compiling Nim code."""
     
     def run(self):
-        # Copy mmcif.nim to nim_mmcif directory if needed
-        self.copy_mmcif_source()
-        
         # Try to ensure Nim is available
         if not self.check_nim_installed():
-            self.install_nim()
+            print("WARNING: Nim compiler not found!")
+            print("Nim should be pre-installed in the build environment.")
         
         # Ensure nimpy is installed
         self.ensure_nimpy()
         
+        # Build the Nim extension
+        self.build_nim_extension()
+        
         # Run the parent build_ext
         super().run()
-    
-    def copy_mmcif_source(self):
-        """Ensure mmcif.nim exists in nim_mmcif directory."""
-        # No longer needed since files are already in nim_mmcif/
-        pass
     
     def check_nim_installed(self):
         """Check if Nim compiler is installed."""
@@ -39,41 +35,10 @@ class NimBuildExt(build_ext):
                 text=True,
                 check=True
             )
-            print(f"Found Nim: {result.stdout.split()[0]}")
+            print(f"Found Nim: {result.stdout.splitlines()[0]}")
             return True
         except (subprocess.CalledProcessError, FileNotFoundError):
             return False
-    
-    def install_nim(self):
-        """Attempt to install Nim if not found."""
-        print("Nim compiler not found. Attempting to install...")
-        
-        system = platform.system()
-        if system == "Linux":
-            try:
-                # Try to install via choosenim
-                subprocess.run(
-                    "curl https://nim-lang.org/choosenim/init.sh -sSf | sh -s -- -y",
-                    shell=True,
-                    check=True
-                )
-                # Add to PATH
-                os.environ["PATH"] = f"{os.environ['HOME']}/.nimble/bin:{os.environ['PATH']}"
-            except subprocess.CalledProcessError:
-                print("Failed to install Nim automatically.")
-                print("Please install Nim manually: https://nim-lang.org/install.html")
-        elif system == "Darwin":  # macOS
-            try:
-                subprocess.run(['brew', 'install', 'nim'], check=True)
-            except (subprocess.CalledProcessError, FileNotFoundError):
-                print("Failed to install Nim via Homebrew.")
-                print("Please install Nim manually: brew install nim")
-        elif system == "Windows":
-            print("Please install Nim manually on Windows:")
-            print("Visit: https://nim-lang.org/install_windows.html")
-        else:
-            print(f"Unsupported system: {system}")
-            print("Please install Nim manually: https://nim-lang.org/install.html")
     
     def ensure_nimpy(self):
         """Ensure nimpy is installed."""
@@ -95,31 +60,122 @@ class NimBuildExt(build_ext):
         except (subprocess.CalledProcessError, FileNotFoundError) as e:
             print(f"Warning: Could not check/install nimpy: {e}")
             print("You may need to install it manually: nimble install nimpy")
+    
+    def build_nim_extension(self):
+        """Build the Nim extension module."""
+        system = platform.system()
+        machine = platform.machine()
+        
+        # Change to nim_mmcif directory
+        nim_dir = Path('nim_mmcif')
+        if not nim_dir.exists():
+            print(f"ERROR: {nim_dir} directory not found!")
+            return False
+        
+        original_dir = os.getcwd()
+        os.chdir(nim_dir)
+        
+        try:
+            # Base command
+            cmd = ['nim', 'c', '--app:lib']
+            
+            # Platform-specific settings
+            if system == 'Darwin':  # macOS
+                if machine == 'arm64':
+                    cmd.extend(['--cpu:arm64', '--passC:-arch arm64', '--passL:-arch arm64'])
+                else:
+                    cmd.extend(['--cpu:amd64', '--passC:-arch x86_64', '--passL:-arch x86_64'])
+                cmd.extend(['--cc:clang', '--out:nim_mmcif.so'])
+                output_file = 'nim_mmcif.so'
+            
+            elif system == 'Linux':
+                if machine in ['aarch64', 'arm64']:
+                    cmd.append('--cpu:arm64')
+                else:
+                    cmd.append('--cpu:amd64')
+                cmd.extend(['--cc:gcc', '--passL:-fPIC', '--out:nim_mmcif.so'])
+                output_file = 'nim_mmcif.so'
+            
+            elif system == 'Windows':
+                cmd.append('--cpu:amd64')
+                # On Windows, we need to use the .pyd extension
+                cmd.append('--out:nim_mmcif.pyd')
+                output_file = 'nim_mmcif.pyd'
+                
+                # Add Windows-specific flags
+                # Try to use Visual Studio compiler if available
+                if os.path.exists('C:/Program Files/Microsoft Visual Studio') or \
+                   os.path.exists('C:/Program Files (x86)/Microsoft Visual Studio'):
+                    cmd.append('--cc:vcc')
+                else:
+                    # Use MinGW if available
+                    cmd.append('--cc:gcc')
+            
+            else:
+                print(f"WARNING: Unknown platform {system}, using defaults")
+                cmd.append('--out:nim_mmcif.so')
+                output_file = 'nim_mmcif.so'
+            
+            # Add optimization flags
+            cmd.extend(['--opt:speed', '--threads:on'])
+            
+            # Add source file
+            cmd.append('nim_mmcif.nim')
+            
+            print(f"Building Nim extension with command: {' '.join(cmd)}")
+            
+            # Run the build command
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                print(f"Build failed with return code {result.returncode}")
+                print(f"stdout: {result.stdout}")
+                print(f"stderr: {result.stderr}")
+                return False
+            
+            # Check if the output file was created
+            if not Path(output_file).exists():
+                print(f"ERROR: Expected output file {output_file} was not created!")
+                return False
+            
+            print(f"Successfully built {output_file}")
+            return True
+            
+        except Exception as e:
+            print(f"Build failed with exception: {e}")
+            return False
+        finally:
+            os.chdir(original_dir)
 
 
 # Check if we're building a wheel or sdist
 building_wheel = 'bdist_wheel' in sys.argv
 building_sdist = 'sdist' in sys.argv
 
-# Configure extensions based on build type
+# For wheel builds, we need to ensure the extension is built
 ext_modules = []
+cmdclass = {}
 
-# Only try to import nimporter if we're actually building
-if building_wheel or not (building_sdist or '--help' in sys.argv):
+if building_wheel:
+    # When building wheels, we use the custom build_ext to compile Nim code
+    cmdclass['build_ext'] = NimBuildExt
+    # Add a dummy extension to trigger build_ext
+    ext_modules = [Extension('nim_mmcif._dummy', sources=[])]
+else:
+    # For source distributions or regular installs, rely on nimporter
     try:
         import nimporter
-        # Let nimporter handle the Nim extensions
         print("Using nimporter for Nim extensions")
     except ImportError:
-        print("Warning: nimporter not found.")
-        print("Install with: pip install nimporter")
-        print("Nim extensions will need to be compiled manually.")
+        if not building_sdist:
+            print("Warning: nimporter not found.")
+            print("Install with: pip install nimporter")
 
 
 setup(
     packages=find_packages(),
     ext_modules=ext_modules,
-    cmdclass={'build_ext': NimBuildExt},
+    cmdclass=cmdclass,
     zip_safe=False,  # Required for nimporter to work correctly
     include_package_data=True,  # Include files specified in MANIFEST.in
 )
