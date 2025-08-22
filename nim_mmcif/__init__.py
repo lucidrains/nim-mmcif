@@ -2,6 +2,21 @@
 
 
 try:
+    # First check if setuptools is available (required by nimporter)
+    try:
+        import setuptools
+    except ImportError:
+        raise ImportError(
+            "setuptools is required but not installed. "
+            "Please install it with: pip install setuptools"
+        )
+    
+    # Check if we have a placeholder extension (created during CI build without Nim)
+    from pathlib import Path
+    placeholder_marker = Path(__file__).parent / '.placeholder_extension'
+    if placeholder_marker.exists():
+        print("Note: nim-mmcif was built without Nim compiler. Runtime compilation will be attempted.")
+    
     # Enable nimporter to compile and import .nim files
     import nimporter
 
@@ -11,7 +26,6 @@ try:
     import nim_mmcif.nim_mmcif as mmcif
 
     # Re-export the functions with Python-friendly wrappers
-    from pathlib import Path
     from typing import Any, Dict, List, Tuple, Union
 
     def parse_mmcif(filepath: Union[str, Path]) -> Dict[str, Any]:
@@ -126,6 +140,14 @@ except ImportError as e:
 
     # Check for specific missing dependencies
     missing_deps = []
+    
+    # Check setuptools first (required by nimporter)
+    try:
+        import setuptools
+    except ImportError:
+        missing_deps.append("setuptools")
+    
+    # Then check nimporter
     try:
         import nimporter
     except ImportError:
@@ -135,17 +157,18 @@ except ImportError as e:
 
     if missing_deps:
         error_msg += f"Missing dependencies: {', '.join(missing_deps)}\n"
+        error_msg += f"Please install with: pip install {' '.join(missing_deps)}\n\n"
 
     error_msg += (
-        "Please ensure:\n"
-        "1. nimporter is installed: pip install nimporter\n"
-        "2. Nim compiler is installed: https://nim-lang.org/install.html\n"
-        "3. nimpy is installed: nimble install nimpy\n"
+        "Requirements:\n"
+        "1. setuptools: pip install setuptools\n"
+        "2. nimporter: pip install nimporter\n"
+        "3. Nim compiler: https://nim-lang.org/install.html\n"
+        "4. nimpy: nimble install nimpy\n"
     )
 
-    # Only show original error if it's not about setuptools
-    # (setuptools errors are typically secondary issues from nimporter internals)
-    if "setuptools" not in str(e):
+    # Only show original error if it's not about known missing dependencies
+    if not any(dep in str(e) for dep in ['setuptools', 'nimporter']):
         error_msg += f"\nOriginal error: {e}"
 
     raise ImportError(error_msg) from e

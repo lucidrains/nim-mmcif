@@ -84,10 +84,12 @@ jobs:
             brew install nim
             nim --version
             nimble install nimpy -y
-          # Windows setup
+          # Windows setup - download and extract Nim directly
           CIBW_BEFORE_ALL_WINDOWS: |
-            choco install nim -y
-            refreshenv
+            curl -L https://nim-lang.org/download/nim-2.2.4_x64.zip -o nim.zip
+            7z x nim.zip -oC:\
+            set PATH=C:\nim-2.2.4\bin;%PATH%
+            echo C:\nim-2.2.4\bin>> %GITHUB_PATH%
             nim --version
             nimble install nimpy -y
           # Common build requirements for Linux/macOS
@@ -106,8 +108,12 @@ jobs:
             cd {project} && python setup.py build_ext --inplace
           # Windows-specific build requirements
           CIBW_BEFORE_BUILD_WINDOWS: |
+            set PATH=C:\nim-2.2.4\bin;%PATH%
             python -m pip install --upgrade pip setuptools wheel
             python -m pip install nimporter>=1.1.0
+            echo "Nim path check:"
+            where nim
+            nim --version
             echo "Building Nim extension for Windows"
             cd {project} && python setup.py build_ext --inplace
           # Test imports
