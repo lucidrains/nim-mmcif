@@ -5,8 +5,8 @@ include setup.py
 include mmcif.nimble
 include build_nim.py
 
-# Include all Nim source files
-recursive-include nim_mmcif *.nim *.nimble *.cfg *.nim.cfg
+# Include all Nim source files and dummy C extension
+recursive-include nim_mmcif *.nim *.nimble *.cfg *.nim.cfg *.c
 recursive-include tests *.nim *.mmcif *.py *.nims
 
 # Include nimbase headers from nim-extensions

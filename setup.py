@@ -191,7 +191,7 @@ if building_wheel:
     # When building wheels, we use the custom build_ext to compile Nim code
     cmdclass['build_ext'] = NimBuildExt
     # Add a dummy extension to trigger build_ext
-    ext_modules = [Extension('nim_mmcif._dummy', sources=[])]
+    ext_modules = [Extension('nim_mmcif._dummy', sources=['nim_mmcif/_dummy.c'])]
 else:
     # For source distributions or regular installs, rely on nimporter
     try:
