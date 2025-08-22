@@ -17,10 +17,37 @@ def build():
     os.chdir('nim_mmcif')
     
     system = platform.system()
+    machine = platform.machine()
     cmd = ['nim', 'c', '--app:lib', '--opt:speed', '--threads:on']
     
     if system == 'Darwin':
         cmd.extend(['--cc:clang', '--out:nim_mmcif.so'])
+        
+        # Check for ARCHFLAGS environment variable (used by cibuildwheel)
+        archflags = os.environ.get('ARCHFLAGS', '')
+        if '-arch arm64' in archflags:
+            print("Building for ARM64 architecture")
+            cmd.extend(['--cpu:arm64', '--passC:-arch arm64', '--passL:-arch arm64'])
+        elif '-arch x86_64' in archflags:
+            print("Building for x86_64 architecture")
+            cmd.extend(['--cpu:amd64', '--passC:-arch x86_64', '--passL:-arch x86_64'])
+        else:
+            # Check CIBW_ARCHS_MACOS if ARCHFLAGS not set
+            cibw_arch = os.environ.get('CIBW_ARCHS_MACOS', '')
+            if 'arm64' in cibw_arch:
+                print("Building for ARM64 architecture (from CIBW_ARCHS_MACOS)")
+                cmd.extend(['--cpu:arm64', '--passC:-arch arm64', '--passL:-arch arm64'])
+            elif 'x86_64' in cibw_arch:
+                print("Building for x86_64 architecture (from CIBW_ARCHS_MACOS)")
+                cmd.extend(['--cpu:amd64', '--passC:-arch x86_64', '--passL:-arch x86_64'])
+            else:
+                # Default to native architecture
+                print(f"Building for native architecture: {machine}")
+                if machine == 'arm64':
+                    cmd.extend(['--cpu:arm64', '--passC:-arch arm64', '--passL:-arch arm64'])
+                elif machine in ['x86_64', 'AMD64']:
+                    cmd.extend(['--cpu:amd64', '--passC:-arch x86_64', '--passL:-arch x86_64'])
+                    
     elif system == 'Linux':
         cmd.extend(['--cc:gcc', '--passL:-fPIC', '--out:nim_mmcif.so'])
     elif system == 'Windows':

@@ -119,6 +119,14 @@ jobs:
             pip install --upgrade pip setuptools wheel
             pip install nimporter>=1.1.0
             echo "Building Nim extension for macOS"
+            echo "CIBW_ARCHS_MACOS: $CIBW_ARCHS_MACOS"
+            if [[ "$CIBW_ARCHS_MACOS" == "arm64" ]]; then
+              export ARCHFLAGS="-arch arm64"
+              echo "Setting ARCHFLAGS for ARM64: $ARCHFLAGS"
+            elif [[ "$CIBW_ARCHS_MACOS" == "x86_64" ]]; then
+              export ARCHFLAGS="-arch x86_64"
+              echo "Setting ARCHFLAGS for x86_64: $ARCHFLAGS"
+            fi
             echo "Target architecture from ARCHFLAGS: $ARCHFLAGS"
             cd {project} && python setup.py build_ext --inplace
           # Windows-specific build requirements

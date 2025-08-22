@@ -71,6 +71,32 @@ class NimBuildExt(build_ext):
             if system == 'Darwin':  # macOS
                 output_file = 'nim_mmcif.so'
                 cmd.extend(['--cc:clang', f'--out:{output_file}'])
+                
+                # Check for ARCHFLAGS environment variable (used by cibuildwheel)
+                archflags = os.environ.get('ARCHFLAGS', '')
+                if '-arch arm64' in archflags:
+                    print("Building for ARM64 architecture")
+                    cmd.extend(['--cpu:arm64', '--passC:-arch arm64', '--passL:-arch arm64'])
+                elif '-arch x86_64' in archflags:
+                    print("Building for x86_64 architecture")
+                    cmd.extend(['--cpu:amd64', '--passC:-arch x86_64', '--passL:-arch x86_64'])
+                else:
+                    # Check CIBW_ARCHS_MACOS if ARCHFLAGS not set
+                    cibw_arch = os.environ.get('CIBW_ARCHS_MACOS', '')
+                    if 'arm64' in cibw_arch:
+                        print("Building for ARM64 architecture (from CIBW_ARCHS_MACOS)")
+                        cmd.extend(['--cpu:arm64', '--passC:-arch arm64', '--passL:-arch arm64'])
+                    elif 'x86_64' in cibw_arch:
+                        print("Building for x86_64 architecture (from CIBW_ARCHS_MACOS)")
+                        cmd.extend(['--cpu:amd64', '--passC:-arch x86_64', '--passL:-arch x86_64'])
+                    else:
+                        # Default to native architecture
+                        print(f"Building for native architecture: {machine}")
+                        if machine == 'arm64':
+                            cmd.extend(['--cpu:arm64', '--passC:-arch arm64', '--passL:-arch arm64'])
+                        elif machine in ['x86_64', 'AMD64']:
+                            cmd.extend(['--cpu:amd64', '--passC:-arch x86_64', '--passL:-arch x86_64'])
+                
             elif system == 'Linux':
                 output_file = 'nim_mmcif.so'
                 cmd.extend(['--cc:gcc', '--passL:-fPIC', f'--out:{output_file}'])
