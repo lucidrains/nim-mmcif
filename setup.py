@@ -48,6 +48,7 @@ class NimBuildExt(build_ext):
     
     def check_nim_installed(self):
         """Check if Nim compiler is installed."""
+        # First try normal PATH
         try:
             result = subprocess.run(
                 ['nim', '--version'],
@@ -58,7 +59,27 @@ class NimBuildExt(build_ext):
             print(f"Found Nim: {result.stdout.splitlines()[0]}")
             return True
         except (subprocess.CalledProcessError, FileNotFoundError):
-            return False
+            pass
+        
+        # On Windows CI, Nim might be at a specific location
+        if platform.system() == 'Windows' and os.environ.get('CI'):
+            nim_path = r'C:\nim-2.2.4\bin\nim.exe'
+            if os.path.exists(nim_path):
+                try:
+                    result = subprocess.run(
+                        [nim_path, '--version'],
+                        capture_output=True,
+                        text=True,
+                        check=True
+                    )
+                    print(f"Found Nim at {nim_path}: {result.stdout.splitlines()[0]}")
+                    # Add to PATH for this process
+                    os.environ['PATH'] = r'C:\nim-2.2.4\bin;' + os.environ.get('PATH', '')
+                    return True
+                except (subprocess.CalledProcessError, FileNotFoundError):
+                    pass
+        
+        return False
     
     def check_prebuilt_binary(self):
         """Check if a pre-built binary exists."""
