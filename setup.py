@@ -24,34 +24,34 @@ class NimBuildExt(build_ext):
         
         # Try to ensure Nim is available
         if not self.check_nim_installed():
-            print("WARNING: Nim compiler not found!")
-            print("Nim should be pre-installed in the build environment.")
-            print("Attempting to continue with pre-built binary or fallback...")
+            print("ERROR: Nim compiler not found!")
+            print("Nim is required to build this extension.")
+            
             # Check if a pre-built binary exists
-            if not self.check_prebuilt_binary():
-                print("WARNING: No pre-built binary found and Nim compiler not available")
-                print("Please install Nim: https://nim-lang.org/install.html")
-                # For CI/CD environments, we should have Nim installed
-                # Only create placeholder as absolute last resort
-                if os.environ.get('CI'):
-                    print("WARNING: CI environment detected but Nim not found!")
-                    print("This should not happen - please check CI configuration")
-                    print("Creating placeholder extension as fallback...")
-                    self.create_dummy_extension()
-                else:
-                    print("Continuing without Nim extension - runtime compilation will be attempted")
+            if self.check_prebuilt_binary():
+                print("Using pre-built binary.")
+                return
+            
+            # For CI/CD environments, this is a critical error
+            if os.environ.get('CI'):
+                print("ERROR: CI environment detected but Nim not found!")
+                print("Please check CI configuration - Nim should be installed at C:\\nim-2.2.4")
+                raise RuntimeError("Nim compiler not found in CI environment")
+            else:
+                print("Please install Nim from: https://nim-lang.org/install.html")
+                print("Or install from source with Nim and nimporter available")
+                raise RuntimeError("Nim compiler not found")
         else:
             # Ensure nimpy is installed
             self.ensure_nimpy()
             
             # Build the Nim extension
             if not self.build_nim_extension():
-                print("WARNING: Nim build failed, checking for pre-built binary...")
-                if not self.check_prebuilt_binary():
-                    print("WARNING: Failed to build Nim extension and no pre-built binary found")
-                    if os.environ.get('CI'):
-                        print("CI environment detected - creating placeholder extension")
-                        self.create_dummy_extension()
+                print("ERROR: Nim build failed!")
+                if self.check_prebuilt_binary():
+                    print("Using pre-built binary as fallback.")
+                else:
+                    raise RuntimeError("Failed to build Nim extension")
         
         # Run the parent build_ext
         super().run()
@@ -62,64 +62,12 @@ class NimBuildExt(build_ext):
     
     def check_nim_installed(self):
         """Check if Nim compiler is installed."""
-        # First try normal PATH
-        try:
-            result = subprocess.run(
-                ['nim', '--version'],
-                capture_output=True,
-                text=True,
-                check=True
-            )
-            print(f"Found Nim: {result.stdout.splitlines()[0]}")
-            return True
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            pass
-        
-        # On Windows, check common installation locations
+        # On Windows, prioritize checking known installation paths first
         if platform.system() == 'Windows':
-            # Debug: List C:\ contents in CI
-            if os.environ.get('CI'):
-                print("Debug: Checking for Nim in CI environment...")
-                print(f"Current PATH: {os.environ.get('PATH', 'NOT SET')}")
-                
-                # Check if nim is already in PATH but with .exe extension
-                try:
-                    result = subprocess.run(
-                        ['nim.exe', '--version'],
-                        capture_output=True,
-                        text=True,
-                        check=True
-                    )
-                    print(f"Found nim.exe in PATH: {result.stdout.splitlines()[0]}")
-                    return True
-                except (subprocess.CalledProcessError, FileNotFoundError):
-                    pass
-                
-                # Check for cmd wrapper
-                try:
-                    result = subprocess.run(
-                        ['cmd', '/c', 'nim', '--version'],
-                        capture_output=True,
-                        text=True,
-                        check=True
-                    )
-                    print(f"Found Nim via cmd: {result.stdout.splitlines()[0]}")
-                    return True
-                except (subprocess.CalledProcessError, FileNotFoundError):
-                    pass
-                
-                try:
-                    import glob
-                    dirs = glob.glob('C:\\*')
-                    print(f"Found directories: {dirs[:10]}")  # Show first 10
-                    nim_dirs = [d for d in dirs if 'nim' in d.lower()]
-                    print(f"Nim-related directories: {nim_dirs}")
-                except Exception as e:
-                    print(f"Could not list directories: {e}")
-            
             # Check multiple possible Nim locations on Windows
+            # Put CI path first since that's what we're using
             possible_paths = [
-                r'C:\nim-2.2.4\bin\nim.exe',  # CI installation path
+                r'C:\nim-2.2.4\bin\nim.exe',  # CI installation path (CHECK THIS FIRST!)
                 r'C:\tools\nim\bin\nim.exe',  # Chocolatey installation
                 r'C:\Program Files\nim\bin\nim.exe',
                 os.path.expanduser(r'~\.nimble\bin\nim.exe'),  # User installation
@@ -144,6 +92,52 @@ class NimBuildExt(build_ext):
                         return True
                     except (subprocess.CalledProcessError, FileNotFoundError):
                         continue
+            
+            # If not found in known paths, check PATH
+            # Check if nim is already in PATH but with .exe extension
+            try:
+                result = subprocess.run(
+                    ['nim.exe', '--version'],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                print(f"Found nim.exe in PATH: {result.stdout.splitlines()[0]}")
+                return True
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                pass
+            
+            # Debug output in CI
+            if os.environ.get('CI'):
+                print("DEBUG: Nim not found in expected locations in CI!")
+                print(f"Current PATH: {os.environ.get('PATH', 'NOT SET')}")
+                print("Checking C:\\ for nim directories...")
+                try:
+                    import glob
+                    nim_patterns = [
+                        'C:\\nim*',
+                        'C:\\tools\\nim*',
+                        'C:\\ProgramData\\nim*'
+                    ]
+                    for pattern in nim_patterns:
+                        matches = glob.glob(pattern)
+                        if matches:
+                            print(f"Found: {matches}")
+                except Exception as e:
+                    print(f"Could not search directories: {e}")
+        
+        # For non-Windows or if Windows checks failed, try normal PATH
+        try:
+            result = subprocess.run(
+                ['nim', '--version'],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            print(f"Found Nim: {result.stdout.splitlines()[0]}")
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass
         
         return False
     
@@ -201,29 +195,6 @@ class NimBuildExt(build_ext):
             print("WARNING: build_lib not set, cannot copy .pyd file")
             return False
     
-    def create_dummy_extension(self):
-        """Create a dummy extension file for CI environments without Nim."""
-        system = platform.system()
-        
-        if system == 'Windows':
-            binary_name = 'nim_mmcif.pyd'
-        else:
-            binary_name = 'nim_mmcif.so'
-        
-        binary_path = Path('nim_mmcif') / binary_name
-        
-        # Create a minimal placeholder file
-        # This will allow the wheel to build, but the actual functionality
-        # will require nimporter to compile at runtime
-        print(f"Creating placeholder extension: {binary_path}")
-        binary_path.touch()
-        
-        # Also create a marker file to indicate this is a placeholder
-        marker_path = Path('nim_mmcif') / '.placeholder_extension'
-        marker_path.write_text('This is a placeholder extension created during CI build without Nim compiler.')
-        
-        return True
-    
     def ensure_nimpy(self):
         """Ensure nimpy is installed."""
         try:
@@ -267,10 +238,14 @@ class NimBuildExt(build_ext):
         try:
             # Base command - use the discovered Nim path on Windows if available
             if platform.system() == 'Windows':
+                # Always use the NIM_PATH if it was set during check_nim_installed
                 if os.environ.get('NIM_PATH'):
-                    cmd = [os.environ['NIM_PATH'], 'c', '--app:lib']
+                    nim_exe = os.environ['NIM_PATH']
+                    print(f"Using Nim from NIM_PATH: {nim_exe}")
+                    cmd = [nim_exe, 'c', '--app:lib']
                 else:
-                    # Try both nim and nim.exe
+                    # Fallback to trying nim.exe in PATH
+                    print("NIM_PATH not set, trying nim.exe in PATH")
                     cmd = ['nim.exe', 'c', '--app:lib']
             else:
                 cmd = ['nim', 'c', '--app:lib']
@@ -320,7 +295,9 @@ class NimBuildExt(build_ext):
                 import struct
                 print(f"Python interpreter architecture: {struct.calcsize('P') * 8}-bit")
                 print(f"Python version: {sys.version}")
+                print(f"Platform machine: {platform.machine()}")
                 
+                # Always build for 64-bit on Windows CI
                 cmd.append('--cpu:amd64')
                 # On Windows, we need to use the .pyd extension
                 cmd.append('--out:nim_mmcif.pyd')
@@ -342,7 +319,43 @@ class NimBuildExt(build_ext):
                 python_lib_dir = sysconfig.get_config_var('LIBDIR')
                 python_version = f"{sys.version_info.major}{sys.version_info.minor}"
                 
-                if msvc_available:
+                # In CI environment, prefer GCC for consistency
+                if os.environ.get('CI') and not msvc_available:
+                    print("CI environment detected, using MinGW-w64 GCC")
+                    cmd.append('--cc:gcc')
+                    # Override the nim.cfg settings for CI environment
+                    cmd.append('--forceBuild')  # Force rebuild with new compiler
+                    # Explicitly target 64-bit Windows
+                    cmd.append('--os:windows')
+                    cmd.append('--passC:-m64')
+                    cmd.append('--passL:-m64')
+                    # Generate proper Windows DLL
+                    cmd.append('--passL:-shared')
+                    cmd.append('--passL:-Wl,--out-implib,nim_mmcif.lib')
+                    # Use static runtime to avoid DLL dependencies
+                    cmd.append('--passL:-static-libgcc')
+                    cmd.append('--passL:-static-libstdc++')
+                    # Ensure we're building a Python extension module
+                    cmd.append('--passL:-Wl,--export-all-symbols')
+                    # Link against Python library for MinGW
+                    python_home = sys.prefix
+                    # Try to find python DLL in common locations
+                    python_dll_paths = [
+                        os.path.join(python_home, 'libs', f'python{python_version}.lib'),
+                        os.path.join(python_home, f'python{python_version}.lib'),
+                        os.path.join(sys.base_prefix, 'libs', f'python{python_version}.lib'),
+                    ]
+                    for dll_path in python_dll_paths:
+                        if os.path.exists(dll_path):
+                            print(f"Found Python library at: {dll_path}")
+                            cmd.append(f'--passL:{dll_path}')
+                            break
+                    else:
+                        # Fallback to standard linking
+                        if python_lib_dir:
+                            cmd.append(f'--passL:-L{python_lib_dir}')
+                        cmd.append(f'--passL:-lpython{python_version}')
+                elif msvc_available:
                     # Use MSVC if available (best compatibility with Python on Windows)
                     print("Using MSVC compiler")
                     cmd.append('--cc:vcc')

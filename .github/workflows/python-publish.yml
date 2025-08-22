@@ -104,15 +104,18 @@ jobs:
             7z x nim.zip -oC:\
             C:\nim-2.2.4\bin\nim --version
             C:\nim-2.2.4\bin\nimble install nimpy -y
-            echo Checking for GCC...
-            where gcc || echo GCC not in default PATH
-            echo Setting up MinGW if needed...
-            if not exist "C:\mingw64\bin\gcc.exe" (
-              echo MinGW not found, will rely on cibuildwheel environment
-            ) else (
-              echo Found MinGW at C:\mingw64
-              set PATH=C:\mingw64\bin;%PATH%
-            )
+            echo Installing MinGW-w64 for 64-bit builds...
+            choco install mingw --version=11.2.0 -y --force
+            echo Refreshing environment...
+            refreshenv
+            echo Checking for GCC after installation...
+            where gcc || echo GCC still not in PATH
+            echo Adding MinGW to PATH manually...
+            set PATH=C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin;%PATH%
+            echo PATH=%PATH%
+            gcc --version || echo GCC not available
+            echo Checking GCC architecture...
+            gcc -dumpmachine || echo Could not get GCC target
           # Common build requirements for Linux/macOS
           CIBW_BEFORE_BUILD_LINUX: |
             pip install --upgrade pip setuptools wheel
@@ -132,21 +135,27 @@ jobs:
           CIBW_BEFORE_BUILD_WINDOWS: |
             python -m pip install --upgrade pip setuptools wheel
             python -m pip install nimporter>=1.1.0
-            echo Setting Nim PATH for Windows
-            set PATH=C:\nim-2.2.4\bin;%PATH%
+            echo Setting up build environment for Windows
+            set PATH=C:\nim-2.2.4\bin;C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin;%PATH%
+            echo Updated PATH=%PATH%
             echo Nim path check:
             where nim || echo nim not found in PATH
             C:\nim-2.2.4\bin\nim --version
             echo Checking for available compilers:
             where gcc || echo GCC not found
+            gcc --version || echo GCC version check failed
+            gcc -dumpmachine || echo GCC target check failed
             where cl || echo MSVC not found
             echo Python architecture check:
             python -c "import struct; print(f'Python is {struct.calcsize(\"P\") * 8}-bit')"
             python -c "import platform; print(f'Platform: {platform.platform()}')"
+            python -c "import sys; print(f'Python prefix: {sys.prefix}')"
+            python -c "import sys; import os; libs_dir = os.path.join(sys.prefix, 'libs'); print(f'Python libs directory: {libs_dir}'); import os; print('Contents:', os.listdir(libs_dir) if os.path.exists(libs_dir) else 'Not found')"
             echo Building Nim extension for Windows using setuptools
             cd {project}
             set NIM_PATH=C:\nim-2.2.4\bin\nim.exe
             set NIMBLE_PATH=C:\nim-2.2.4\bin\nimble.exe
+            set CI=1
             python setup.py build_ext --inplace
             echo Checking for built extensions:
             dir nim_mmcif\*.pyd
@@ -155,9 +164,10 @@ jobs:
             dir nim_mmcif\
             echo Checking extension architecture if built:
             if exist nim_mmcif\nim_mmcif.pyd (
-              echo Found nim_mmcif.pyd, checking if it can be loaded...
+              echo Found nim_mmcif.pyd, checking file details...
               python -c "import os; print(f'File size: {os.path.getsize(\"nim_mmcif/nim_mmcif.pyd\")} bytes')"
-              python -c "import struct, ctypes; dll = ctypes.CDLL('./nim_mmcif/nim_mmcif.pyd'); print('Extension loaded successfully')" || echo Failed to load extension with ctypes
+              echo Attempting to load the extension...
+              python -c "import sys; sys.path.insert(0, '.'); import nim_mmcif; print('Extension loaded successfully!')" || echo Failed to import nim_mmcif module
             )
             echo Finished building extension
           # Test imports

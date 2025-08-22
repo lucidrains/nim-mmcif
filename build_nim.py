@@ -104,12 +104,37 @@ def build_nim_extension(system, machine):
         cmd.extend(['--cc:gcc', '--passL:-fPIC', '--out:nim_mmcif.so'])
     
     elif system == 'Windows':
+        # Always build for 64-bit on Windows
         cmd.append('--cpu:amd64')
+        cmd.append('--os:windows')
+        
         # Check for Visual Studio
-        if os.path.exists('C:/Program Files/Microsoft Visual Studio'):
+        msvc_available = False
+        try:
+            result = subprocess.run(['where', 'cl'], capture_output=True, text=True)
+            if result.returncode == 0:
+                msvc_available = True
+                print("MSVC compiler found")
+        except:
+            pass
+        
+        if msvc_available:
             cmd.append('--cc:vcc')
+            cmd.append('--passC:/MD')  # Use multithreaded DLL runtime
         else:
+            print("Using MinGW-w64 GCC")
             cmd.append('--cc:gcc')
+            # Ensure 64-bit build
+            cmd.append('--passC:-m64')
+            cmd.append('--passL:-m64')
+            # Build as shared library
+            cmd.append('--passL:-shared')
+            # Use static runtime to avoid DLL dependencies
+            cmd.append('--passL:-static-libgcc')
+            cmd.append('--passL:-static-libstdc++')
+            # Export all symbols for Python
+            cmd.append('--passL:-Wl,--export-all-symbols')
+        
         cmd.append('--out:nim_mmcif.pyd')
     
     else:
