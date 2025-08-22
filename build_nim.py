@@ -71,10 +71,29 @@ def build_nim_extension(system, machine):
     
     # Platform-specific flags
     if system == 'Darwin':  # macOS
-        if machine == 'arm64':
-            cmd.extend(['--cpu:arm64', '--passC:-arch arm64', '--passL:-arch arm64'])
+        # Set minimum macOS deployment target to 10.9 for wheel compatibility
+        macos_target = os.environ.get('MACOSX_DEPLOYMENT_TARGET', '10.9')
+        
+        # Check if we're building for a specific architecture
+        archflags = os.environ.get('ARCHFLAGS', '')
+        
+        # Determine target architecture
+        if '-arch x86_64' in archflags:
+            target_arch = 'x86_64'
+            nim_cpu = 'amd64'
+        elif '-arch arm64' in archflags:
+            target_arch = 'arm64'
+            nim_cpu = 'arm64'
         else:
-            cmd.extend(['--cpu:amd64', '--passC:-arch x86_64', '--passL:-arch x86_64'])
+            # Default to host architecture
+            target_arch = 'arm64' if machine == 'arm64' else 'x86_64'
+            nim_cpu = 'arm64' if machine == 'arm64' else 'amd64'
+        
+        print(f"Building for macOS {target_arch} (host: {machine})")
+        
+        cmd.extend([f'--cpu:{nim_cpu}', 
+                   f'--passC:-arch {target_arch} -mmacosx-version-min={macos_target}',
+                   f'--passL:-arch {target_arch} -mmacosx-version-min={macos_target}'])
         cmd.extend(['--cc:clang', '--out:nim_mmcif.so'])
     
     elif system == 'Linux':

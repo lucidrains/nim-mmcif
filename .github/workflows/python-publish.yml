@@ -56,10 +56,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # macos-13 is x86_64, macos-latest is arm64
         os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
     
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Set architecture for macOS
+        if: runner.os == 'macOS'
+        run: |
+          if [[ "${{ matrix.os }}" == "macos-13" ]]; then
+            echo "CIBW_ARCHS_MACOS=x86_64" >> $GITHUB_ENV
+          else
+            echo "CIBW_ARCHS_MACOS=arm64" >> $GITHUB_ENV
+          fi
       
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.19.1
@@ -67,8 +77,10 @@ jobs:
           CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-* cp312-*"
           CIBW_SKIP: "*-musllinux_* *i686 *win32"
           CIBW_ARCHS_LINUX: "x86_64"
-          CIBW_ARCHS_MACOS: "x86_64 arm64"
+          # CIBW_ARCHS_MACOS is set dynamically above based on runner
           CIBW_ARCHS_WINDOWS: "AMD64"
+          # Set macOS deployment target to 10.9 for compatibility
+          MACOSX_DEPLOYMENT_TARGET: "10.9"
           # Linux setup - use pre-built binaries for manylinux compatibility
           CIBW_BEFORE_ALL_LINUX: >
             yum install -y wget tar xz &&
@@ -79,11 +91,13 @@ jobs:
             ln -s /opt/nim-2.2.4/bin/nimble /usr/local/bin/nimble &&
             nim --version &&
             nimble install nimpy -y
-          # macOS setup
+          # macOS setup - Install Nim for the host architecture
+          # Note: We'll handle cross-compilation via ARCHFLAGS in BEFORE_BUILD
           CIBW_BEFORE_ALL_MACOS: |
             brew install nim
             nim --version
             nimble install nimpy -y
+            echo "Host architecture: $(uname -m)"
           # Windows setup - download and extract Nim directly
           CIBW_BEFORE_ALL_WINDOWS: |
             curl -L https://nim-lang.org/download/nim-2.2.4_x64.zip -o nim.zip
@@ -103,6 +117,7 @@ jobs:
             pip install --upgrade pip setuptools wheel
             pip install nimporter>=1.1.0
             echo "Building Nim extension for macOS"
+            echo "Target architecture from ARCHFLAGS: $ARCHFLAGS"
             cd {project} && python setup.py build_ext --inplace
           # Windows-specific build requirements
           CIBW_BEFORE_BUILD_WINDOWS: |
