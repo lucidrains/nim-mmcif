@@ -104,6 +104,15 @@ jobs:
             7z x nim.zip -oC:\
             C:\nim-2.2.4\bin\nim --version
             C:\nim-2.2.4\bin\nimble install nimpy -y
+            echo Checking for GCC...
+            where gcc || echo GCC not in default PATH
+            echo Setting up MinGW if needed...
+            if not exist "C:\mingw64\bin\gcc.exe" (
+              echo MinGW not found, will rely on cibuildwheel environment
+            ) else (
+              echo Found MinGW at C:\mingw64
+              set PATH=C:\mingw64\bin;%PATH%
+            )
           # Common build requirements for Linux/macOS
           CIBW_BEFORE_BUILD_LINUX: |
             pip install --upgrade pip setuptools wheel
@@ -128,6 +137,12 @@ jobs:
             echo Nim path check:
             where nim || echo nim not found in PATH
             C:\nim-2.2.4\bin\nim --version
+            echo Checking for available compilers:
+            where gcc || echo GCC not found
+            where cl || echo MSVC not found
+            echo Python architecture check:
+            python -c "import struct; print(f'Python is {struct.calcsize(\"P\") * 8}-bit')"
+            python -c "import platform; print(f'Platform: {platform.platform()}')"
             echo Building Nim extension for Windows using setuptools
             cd {project}
             set NIM_PATH=C:\nim-2.2.4\bin\nim.exe
@@ -135,6 +150,15 @@ jobs:
             python setup.py build_ext --inplace
             echo Checking for built extensions:
             dir nim_mmcif\*.pyd
+            dir nim_mmcif\*.dll
+            echo List all files in nim_mmcif:
+            dir nim_mmcif\
+            echo Checking extension architecture if built:
+            if exist nim_mmcif\nim_mmcif.pyd (
+              echo Found nim_mmcif.pyd, checking if it can be loaded...
+              python -c "import os; print(f'File size: {os.path.getsize(\"nim_mmcif/nim_mmcif.pyd\")} bytes')"
+              python -c "import struct, ctypes; dll = ctypes.CDLL('./nim_mmcif/nim_mmcif.pyd'); print('Extension loaded successfully')" || echo Failed to load extension with ctypes
+            )
             echo Finished building extension
           # Test imports
           CIBW_TEST_COMMAND: |

@@ -316,14 +316,59 @@ class NimBuildExt(build_ext):
                 output_file = 'nim_mmcif.so'
             
             elif system == 'Windows':
+                # Debug: Print Python architecture info
+                import struct
+                print(f"Python interpreter architecture: {struct.calcsize('P') * 8}-bit")
+                print(f"Python version: {sys.version}")
+                
                 cmd.append('--cpu:amd64')
                 # On Windows, we need to use the .pyd extension
                 cmd.append('--out:nim_mmcif.pyd')
                 output_file = 'nim_mmcif.pyd'
                 
-                # Add Windows-specific flags
-                # Use gcc for Windows builds (MinGW is available in cibuildwheel)
-                cmd.append('--cc:gcc')
+                # Check if MSVC is available
+                msvc_available = False
+                try:
+                    # Check if cl.exe (MSVC) is available
+                    msvc_check = subprocess.run(['where', 'cl'], capture_output=True, text=True)
+                    if msvc_check.returncode == 0:
+                        print("MSVC found in PATH")
+                        msvc_available = True
+                except (subprocess.CalledProcessError, FileNotFoundError):
+                    pass
+                
+                # Get Python library information for Windows
+                import sysconfig
+                python_lib_dir = sysconfig.get_config_var('LIBDIR')
+                python_version = f"{sys.version_info.major}{sys.version_info.minor}"
+                
+                if msvc_available:
+                    # Use MSVC if available (best compatibility with Python on Windows)
+                    print("Using MSVC compiler")
+                    cmd.append('--cc:vcc')
+                    cmd.append('--passC:/MD')  # Use multithreaded DLL runtime
+                    # Link against Python library
+                    if python_lib_dir:
+                        cmd.append(f'--passL:/LIBPATH:{python_lib_dir}')
+                    cmd.append(f'--passL:python{python_version}.lib')
+                else:
+                    # Fall back to GCC (available in cibuildwheel via mingw)
+                    print("MSVC not available, using GCC")
+                    cmd.append('--cc:gcc')
+                    # Override the nim.cfg settings for CI environment
+                    cmd.append('--forceBuild')  # Force rebuild with new compiler
+                    # Ensure 64-bit build
+                    cmd.append('--passC:-m64')
+                    cmd.append('--passL:-m64')
+                    # Link as shared library
+                    cmd.append('--passL:-shared')
+                    # Use static libgcc to avoid DLL dependencies
+                    cmd.append('--passL:-static-libgcc')
+                    cmd.append('--passL:-static-libstdc++')
+                    # Link against Python library for MinGW
+                    if python_lib_dir:
+                        cmd.append(f'--passL:-L{python_lib_dir}')
+                    cmd.append(f'--passL:-lpython{python_version}')
             
             else:
                 print(f"WARNING: Unknown platform {system}, using defaults")
@@ -360,6 +405,20 @@ class NimBuildExt(build_ext):
                 pyd_path = Path(output_file)
                 if pyd_path.exists():
                     print(f"Windows extension {output_file} exists at: {pyd_path.absolute()}")
+                    # Check file size
+                    file_size = pyd_path.stat().st_size
+                    print(f"Extension file size: {file_size} bytes")
+                    
+                    # Try to verify it's a valid DLL using ctypes
+                    try:
+                        import ctypes
+                        # This will fail if the DLL is not valid for this architecture
+                        test_dll = ctypes.CDLL(str(pyd_path.absolute()))
+                        print("DLL verification passed - extension is loadable")
+                    except Exception as e:
+                        print(f"WARNING: DLL verification failed: {e}")
+                        print("This may indicate an architecture mismatch")
+                    
                     # Set an attribute so build_ext knows the extension was built
                     self.nim_extension_built = True
                 else:
