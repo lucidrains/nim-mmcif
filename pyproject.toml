@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nim-mmcif"
-version = "0.0.9"
+version = "0.0.10"
 description = "mmCIF parser written in Nim with Python bindings"
 readme = "README.md"
 license = {text = "MIT"}
@@ -49,7 +49,6 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Other",
-    "Programming Language :: Other :: Nim",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "Topic :: Scientific/Engineering :: Chemistry",
     "Topic :: Software Development :: Libraries :: Python Modules"
