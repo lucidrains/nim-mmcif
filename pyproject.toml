@@ -75,6 +75,7 @@ nim_mmcif = [
     "*.nim",
     "*.nimble",
     "*.cfg",
+    "*.c",
     "*.so",
     "*.dylib",
     "*.pyd",
