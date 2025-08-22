@@ -68,6 +68,7 @@ class NimBuildExt(build_ext):
             # Put CI path first since that's what we're using
             possible_paths = [
                 r'C:\nim-2.2.4\bin\nim.exe',  # CI installation path (CHECK THIS FIRST!)
+                r'C:\nim-2.2.4\nim.exe',  # Sometimes nim.exe is directly in the folder
                 r'C:\nim-2.2.4\finish.exe',  # Sometimes nim.exe gets renamed during extraction
                 r'C:\tools\nim\bin\nim.exe',  # Chocolatey installation
                 r'C:\Program Files\nim\bin\nim.exe',
@@ -136,11 +137,46 @@ class NimBuildExt(build_ext):
                                 nim_exe = os.path.join(match, 'bin', 'nim.exe')
                                 if os.path.exists(nim_exe):
                                     print(f"  nim.exe found at: {nim_exe}")
+                                    # Try to use it directly
+                                    try:
+                                        result = subprocess.run(
+                                            [nim_exe, '--version'],
+                                            capture_output=True,
+                                            text=True,
+                                            timeout=5
+                                        )
+                                        if result.returncode == 0:
+                                            print(f"  ✓ Nim works at {nim_exe}: {result.stdout.splitlines()[0]}")
+                                            # Set it up for use
+                                            nim_bin_dir = os.path.dirname(nim_exe)
+                                            os.environ['PATH'] = nim_bin_dir + os.pathsep + os.environ.get('PATH', '')
+                                            os.environ['NIM_PATH'] = nim_exe
+                                            os.environ['NIMBLE_PATH'] = os.path.join(nim_bin_dir, 'nimble.exe')
+                                            return True
+                                    except Exception as test_e:
+                                        print(f"  Could not run {nim_exe}: {test_e}")
                                 else:
                                     # Check if nim.exe is directly in the directory
                                     nim_exe_direct = os.path.join(match, 'nim.exe')
                                     if os.path.exists(nim_exe_direct):
                                         print(f"  nim.exe found at: {nim_exe_direct}")
+                                        # Try to use it directly
+                                        try:
+                                            result = subprocess.run(
+                                                [nim_exe_direct, '--version'],
+                                                capture_output=True,
+                                                text=True,
+                                                timeout=5
+                                            )
+                                            if result.returncode == 0:
+                                                print(f"  ✓ Nim works at {nim_exe_direct}: {result.stdout.splitlines()[0]}")
+                                                # Set it up for use
+                                                os.environ['PATH'] = match + os.pathsep + os.environ.get('PATH', '')
+                                                os.environ['NIM_PATH'] = nim_exe_direct
+                                                os.environ['NIMBLE_PATH'] = os.path.join(match, 'nimble.exe')
+                                                return True
+                                        except Exception as test_e:
+                                            print(f"  Could not run {nim_exe_direct}: {test_e}")
                 except Exception as e:
                     print(f"Could not search directories: {e}")
         
