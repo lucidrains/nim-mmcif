@@ -2,9 +2,7 @@
 requires = [
     "setuptools>=61.0",
     "wheel",
-    "nimporter>=1.1.0",
-    "cython>=0.29.30; python_version < '3.12'",
-    "cython>=3.0.0; python_version >= '3.12'"
+    "nimporter>=1.1.0"
 ]
 build-backend = "setuptools.build_meta"
 
@@ -74,17 +72,9 @@ license-files = []
 [tool.setuptools.package-data]
 nim_mmcif = [
     "*.nim",
-    "*.nimble",
-    "*.cfg",
     "*.c",
     "*.so",
-    "*.dylib",
-    "*.pyd",
-    "*.dll",
-    "*.cpython-*.so",
-    "*.cpython-*.dylib",
-    "*.cp*-*.pyd",
-    "py.typed"
+    "*.pyd"
 ]
 
 [tool.pytest.ini_options]
