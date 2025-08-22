@@ -31,6 +31,20 @@ try:
     # Full path to the extension
     ext_path = Path(__file__).parent / ext_name
     
+    # On Windows, also check for _dummy.*.pyd files that might exist
+    # but we need the real nim_mmcif.pyd
+    if platform.system() == 'Windows' and not ext_path.exists():
+        # List all .pyd files in the directory for debugging
+        pyd_files = list(Path(__file__).parent.glob('*.pyd'))
+        if pyd_files:
+            print(f"Found .pyd files: {[f.name for f in pyd_files]}")
+            # If there's a _dummy.*.pyd but no nim_mmcif.pyd, that's a build issue
+            if any('_dummy' in f.name for f in pyd_files) and not any('nim_mmcif' in f.name for f in pyd_files):
+                raise ImportError(
+                    f"Build error: Found dummy extension but not the actual nim_mmcif.pyd. "
+                    f"The Nim extension was not properly compiled during wheel building."
+                )
+    
     if ext_path.exists():
         # Load the extension directly using importlib
         spec = importlib.util.spec_from_file_location("nim_mmcif_ext", ext_path)

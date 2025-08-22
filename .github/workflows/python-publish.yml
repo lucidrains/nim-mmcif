@@ -124,15 +124,16 @@ jobs:
             python -m pip install --upgrade pip setuptools wheel
             python -m pip install nimporter>=1.1.0
             echo Setting Nim PATH for Windows
-            echo Nim path check before:
-            where nim || echo nim not found in PATH
             set PATH=C:\nim-2.2.4\bin;%PATH%
-            echo Nim path check after:
-            where nim || echo nim should be found now
+            echo Nim path check:
+            where nim || echo nim not found in PATH
             C:\nim-2.2.4\bin\nim --version
-            echo Building Nim extension for Windows
+            echo Building Nim extension for Windows using setuptools
             cd {project}
-            C:\nim-2.2.4\bin\nim c --app:lib --out:nim_mmcif\nim_mmcif.pyd --opt:speed --threads:on --cc:gcc nim_mmcif\nim_mmcif.nim
+            set NIM_PATH=C:\nim-2.2.4\bin\nim.exe
+            set NIMBLE_PATH=C:\nim-2.2.4\bin\nimble.exe
+            python setup.py build_ext --inplace
+            echo Checking for built extensions:
             dir nim_mmcif\*.pyd
             echo Finished building extension
           # Test imports

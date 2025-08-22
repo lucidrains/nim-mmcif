@@ -55,6 +55,10 @@ class NimBuildExt(build_ext):
         
         # Run the parent build_ext
         super().run()
+        
+        # After building, ensure Windows .pyd file is in the build directory
+        if platform.system() == 'Windows':
+            self.copy_windows_extension()
     
     def check_nim_installed(self):
         """Check if Nim compiler is installed."""
@@ -162,6 +166,40 @@ class NimBuildExt(build_ext):
             return True
         
         return False
+    
+    def copy_windows_extension(self):
+        """Copy the Windows .pyd file to the build directory."""
+        pyd_source = Path('nim_mmcif') / 'nim_mmcif.pyd'
+        
+        if not pyd_source.exists():
+            print(f"WARNING: Windows extension {pyd_source} not found!")
+            return False
+        
+        # Find the build directory
+        if self.build_lib:
+            build_dir = Path(self.build_lib) / 'nim_mmcif'
+            build_dir.mkdir(parents=True, exist_ok=True)
+            
+            pyd_dest = build_dir / 'nim_mmcif.pyd'
+            
+            # Copy the .pyd file
+            import shutil
+            try:
+                shutil.copy2(pyd_source, pyd_dest)
+                print(f"Copied {pyd_source} to {pyd_dest}")
+                
+                # Also list the contents to verify
+                print(f"Contents of {build_dir}:")
+                for file in build_dir.iterdir():
+                    print(f"  - {file.name}")
+                
+                return True
+            except Exception as e:
+                print(f"ERROR: Failed to copy .pyd file: {e}")
+                return False
+        else:
+            print("WARNING: build_lib not set, cannot copy .pyd file")
+            return False
     
     def create_dummy_extension(self):
         """Create a dummy extension file for CI environments without Nim."""
@@ -315,6 +353,18 @@ class NimBuildExt(build_ext):
                 return False
             
             print(f"Successfully built {output_file}")
+            
+            # On Windows, also ensure the .pyd is in the package directory
+            if system == 'Windows' and output_file == 'nim_mmcif.pyd':
+                # The file should already be in the right place since we're in nim_mmcif dir
+                pyd_path = Path(output_file)
+                if pyd_path.exists():
+                    print(f"Windows extension {output_file} exists at: {pyd_path.absolute()}")
+                    # Set an attribute so build_ext knows the extension was built
+                    self.nim_extension_built = True
+                else:
+                    print(f"WARNING: {output_file} not found after build!")
+            
             return True
             
         except Exception as e:
