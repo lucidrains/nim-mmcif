@@ -29,6 +29,10 @@ const
     "auth_asym_id",
     "auth_atom_id",
     "pdbx_PDB_model_num",
+    "group_PDB",
+    "pdbx_sifts_xref_db_acc",
+    "pdbx_sifts_xref_db_name",
+    "pdbx_sifts_xref_db_num",
   ]
   
   # Fields that should be parsed as integers
@@ -38,6 +42,7 @@ const
     "label_seq_id",
     "auth_seq_id",
     "pdbx_PDB_model_num",
+    "pdbx_sifts_xref_db_num",
   ])
   
   # Fields that should be parsed as floats
@@ -73,6 +78,10 @@ type
     auth_asym_id*: string
     auth_atom_id*: string
     pdbx_PDB_model_num*: int
+    group_PDB*: string
+    pdbx_sifts_xref_db_acc*: string
+    pdbx_sifts_xref_db_name*: string
+    pdbx_sifts_xref_db_num*: int
     # Convenience aliases for coordinates
     x*: float
     y*: float
@@ -168,6 +177,14 @@ proc parseAtomLine(line: string): Atom =
       atom.auth_atom_id = parseStringValue(token)
     of "pdbx_PDB_model_num":
       atom.pdbx_PDB_model_num = parseIntValue(token)
+    of "group_PDB":
+      atom.group_PDB = parseStringValue(token)
+    of "pdbx_sifts_xref_db_acc":
+      atom.pdbx_sifts_xref_db_acc = parseStringValue(token)
+    of "pdbx_sifts_xref_db_name":
+      atom.pdbx_sifts_xref_db_name = parseStringValue(token)
+    of "pdbx_sifts_xref_db_num":
+      atom.pdbx_sifts_xref_db_num = parseIntValue(token)
   
   return atom
 
