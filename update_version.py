@@ -4,6 +4,8 @@ Script to update version number across all project files.
 Usage: python update_version.py <new_version>
 """
 
+from __future__ import annotations
+
 import sys
 import re
 from pathlib import Path

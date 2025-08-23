@@ -50,6 +50,17 @@ import nim_mmcif
 data = nim_mmcif.parse_mmcif("path/to/file.mmcif")
 print(f"Found {len(data['atoms'])} atoms")
 
+# Parse multiple files using glob patterns
+# Returns dict[str, dict] mapping filepaths to parsed data
+results = nim_mmcif.parse_mmcif("path/to/*.mmcif")
+for filepath, data in results.items():
+    print(f"{filepath}: {len(data['atoms'])} atoms")
+
+# Parse with recursive glob patterns
+results = nim_mmcif.parse_mmcif("path/**/*.mmcif")
+for filepath, data in results.items():
+    print(f"{filepath}: {len(data['atoms'])} atoms")
+
 # Get atom count directly
 count = nim_mmcif.get_atom_count("path/to/file.mmcif")
 print(f"File contains {count} atoms")
@@ -101,7 +112,7 @@ files = [
     "path/to/structure3.mmcif"
 ]
 
-# Parse all files in batch
+# Parse all files in batch (returns list when no globs used)
 results = nim_mmcif.parse_mmcif_batch(files)
 
 # Process results
@@ -119,6 +130,20 @@ for i, data in enumerate(results):
         residues = set((atom['label_asym_id'], atom['label_seq_id']) 
                       for atom in atoms)
         print(f"  Residues: {len(residues)}")
+
+# Batch processing with glob patterns (returns dict)
+results = nim_mmcif.parse_mmcif_batch("path/to/*.mmcif")
+for filepath, data in results.items():
+    print(f"{filepath}: {len(data['atoms'])} atoms")
+
+# Mix of glob patterns and regular paths (returns dict)
+results = nim_mmcif.parse_mmcif_batch([
+    "specific_file.mmcif",
+    "structures/*.mmcif",
+    "models/model_?.mmcif"
+])
+for filepath, data in results.items():
+    print(f"{filepath}: {len(data['atoms'])} atoms")
 ```
 
 Batch processing is particularly useful when:
@@ -133,11 +158,18 @@ The batch function provides better performance than individual parsing when proc
 
 ### Functions
 
-#### `parse_mmcif(filepath: str) -> dict`
-Parse an mmCIF file and return a dictionary with parsed data.
+#### `parse_mmcif(filepath: str) -> dict | dict[str, dict]`
+Parse an mmCIF file or files matching a glob pattern.
+- **Single file**: Returns a dictionary with parsed data containing 'atoms' key
+- **Glob pattern**: Returns a dictionary mapping file paths to parsed data
+- Supports wildcards: `*` (any characters), `?` (single character), `**` (recursive)
 
-#### `parse_mmcif_batch(filepaths: list[str]) -> list[dict]`
-Parse multiple mmCIF files in a single operation. More efficient than parsing files individually when processing multiple structures.
+#### `parse_mmcif_batch(filepaths: list[str] | str) -> list[dict] | dict[str, dict]`
+Parse multiple mmCIF files in a single operation.
+- **No glob patterns**: Returns a list of dictionaries with parsed data
+- **With glob patterns**: Returns a dictionary mapping file paths to parsed data
+- Accepts a single path/pattern or a list of paths/patterns
+- More efficient than parsing files individually when processing multiple structures
 
 #### `get_atom_count(filepath: str) -> int`
 Get the number of atoms in an mmCIF file.

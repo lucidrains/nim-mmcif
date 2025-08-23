@@ -1,4 +1,7 @@
 """Setup script for nim-mmcif package."""
+
+from __future__ import annotations
+
 import os
 import platform
 import subprocess

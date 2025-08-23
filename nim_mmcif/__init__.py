@@ -1,9 +1,12 @@
 """nim-mmcif: Fast mmCIF parser using Nim with Python bindings."""
 
+from __future__ import annotations
+
+import glob
 import platform
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any
 
 # Version information
 from ._version import __version__
@@ -165,36 +168,71 @@ if mmcif is None:
 
 
 # Helper function to validate file path
-def _validate_filepath(filepath: Union[str, Path]) -> str:
+def _validate_filepath(filepath: str | Path) -> str:
     """Convert path to string and validate it exists."""
     filepath = Path(filepath)
     if not filepath.exists():
         raise FileNotFoundError(f"mmCIF file not found: {filepath}")
     return str(filepath)
 
+def _has_glob_pattern(filepath: str | Path) -> bool:
+    """Check if a filepath contains glob patterns."""
+    str_path = str(filepath)
+    return any(char in str_path for char in ['*', '?', '[', ']'])
+
+def _expand_glob(pattern: str | Path) -> list[Path]:
+    """Expand a glob pattern into a list of matching file paths."""
+    str_pattern = str(pattern)
+    matched_files = glob.glob(str_pattern, recursive=True)
+    
+    # Filter to only include .mmcif files (case insensitive)
+    mmcif_files = [
+        Path(f) for f in matched_files 
+        if f.lower().endswith(('.mmcif', '.cif'))
+    ]
+    
+    if not mmcif_files:
+        raise FileNotFoundError(f"No mmCIF files found matching pattern: {pattern}")
+    
+    return sorted(mmcif_files)  # Sort for consistent ordering
+
 # Re-export the functions with Python-friendly wrappers
-def parse_mmcif(filepath: Union[str, Path]) -> Dict[str, Any]:
+def parse_mmcif(filepath: str | Path) -> dict[str, Any] | dict[str, dict[str, Any]]:
     """
-    Parse an mmCIF file using the Nim backend.
+    Parse an mmCIF file or files matching a glob pattern using the Nim backend.
 
     Args:
-        filepath: Path to the mmCIF file.
+        filepath: Path to the mmCIF file or glob pattern.
 
     Returns:
-        Dictionary containing parsed mmCIF data with 'atoms' key.
+        If filepath is a single file: Dictionary containing parsed mmCIF data with 'atoms' key.
+        If filepath is a glob pattern: Dictionary mapping file paths to parsed mmCIF data.
 
     Raises:
-        FileNotFoundError: If the file doesn't exist.
+        FileNotFoundError: If the file doesn't exist or no files match the glob pattern.
         RuntimeError: If parsing fails.
     """
-    try:
-        return mmcif.parse_mmcif(_validate_filepath(filepath))
-    except FileNotFoundError:
-        raise
-    except Exception as e:
-        raise RuntimeError(f"Failed to parse mmCIF file: {e}") from e
+    # Check if the filepath contains glob patterns
+    if _has_glob_pattern(filepath):
+        # Expand glob pattern and parse each file
+        matched_files = _expand_glob(filepath)
+        result = {}
+        for file_path in matched_files:
+            try:
+                result[str(file_path)] = mmcif.parse_mmcif(str(file_path))
+            except Exception as e:
+                raise RuntimeError(f"Failed to parse mmCIF file {file_path}: {e}") from e
+        return result
+    else:
+        # Single file case
+        try:
+            return mmcif.parse_mmcif(_validate_filepath(filepath))
+        except FileNotFoundError:
+            raise
+        except Exception as e:
+            raise RuntimeError(f"Failed to parse mmCIF file: {e}") from e
 
-def get_atom_count(filepath: Union[str, Path]) -> int:
+def get_atom_count(filepath: str | Path) -> int:
     """
     Get the number of atoms in an mmCIF file.
 
@@ -215,7 +253,7 @@ def get_atom_count(filepath: Union[str, Path]) -> int:
     except Exception as e:
         raise RuntimeError(f"Failed to get atom count: {e}") from e
 
-def get_atoms(filepath: Union[str, Path]) -> List[Dict[str, Any]]:
+def get_atoms(filepath: str | Path) -> list[dict[str, Any]]:
     """
     Get all atoms from an mmCIF file.
 
@@ -236,7 +274,7 @@ def get_atoms(filepath: Union[str, Path]) -> List[Dict[str, Any]]:
     except Exception as e:
         raise RuntimeError(f"Failed to get atoms: {e}") from e
 
-def get_atom_positions(filepath: Union[str, Path]) -> List[Tuple[float, float, float]]:
+def get_atom_positions(filepath: str | Path) -> list[tuple[float, float, float]]:
     """
     Get 3D coordinates of all atoms from an mmCIF file.
 
@@ -257,27 +295,71 @@ def get_atom_positions(filepath: Union[str, Path]) -> List[Tuple[float, float, f
     except Exception as e:
         raise RuntimeError(f"Failed to get atom positions: {e}") from e
 
-def parse_mmcif_batch(filepaths: List[Union[str, Path]]) -> List[Dict[str, Any]]:
+def parse_mmcif_batch(filepaths: list[str | Path] | str | Path) -> list[dict[str, Any]] | dict[str, dict[str, Any]]:
     """
     Parse multiple mmCIF files using the Nim backend.
 
     Args:
-        filepaths: List of paths to mmCIF files.
+        filepaths: List of paths to mmCIF files, a single path, or a glob pattern.
+                  If a single string with glob patterns is provided, it will be expanded.
 
     Returns:
-        List of dictionaries, each containing parsed mmCIF data with 'atoms' key.
+        If no glob patterns are used: List of dictionaries, each containing parsed mmCIF data.
+        If glob patterns are used: Dictionary mapping file paths to parsed mmCIF data.
 
     Raises:
-        FileNotFoundError: If any file doesn't exist.
+        FileNotFoundError: If any file doesn't exist or no files match glob pattern.
         RuntimeError: If parsing fails for any file.
     """
-    try:
-        str_paths = [_validate_filepath(fp) for fp in filepaths]
-        return mmcif.parse_mmcif_batch(str_paths)
-    except FileNotFoundError:
-        raise
-    except Exception as e:
-        raise RuntimeError(f"Failed to parse mmCIF files in batch: {e}") from e
+    # Handle single filepath (string or Path) that might be a glob
+    if isinstance(filepaths, (str, Path)):
+        if _has_glob_pattern(filepaths):
+            # Expand glob and return as dict
+            matched_files = _expand_glob(filepaths)
+            result = {}
+            for file_path in matched_files:
+                try:
+                    result[str(file_path)] = mmcif.parse_mmcif(str(file_path))
+                except Exception as e:
+                    raise RuntimeError(f"Failed to parse mmCIF file {file_path}: {e}") from e
+            return result
+        else:
+            # Single file, treat as batch of one
+            filepaths = [filepaths]
+    
+    # Check if any filepath in the list contains glob patterns
+    expanded_paths = []
+    has_any_glob = False
+    path_mapping = {}  # Maps expanded path to original pattern
+    
+    for filepath in filepaths:
+        if _has_glob_pattern(filepath):
+            has_any_glob = True
+            matched = _expand_glob(filepath)
+            for matched_path in matched:
+                expanded_paths.append(matched_path)
+                path_mapping[str(matched_path)] = str(matched_path)
+        else:
+            validated = _validate_filepath(filepath)
+            expanded_paths.append(Path(validated))
+            path_mapping[validated] = validated
+    
+    # If glob patterns were used, return dict format
+    if has_any_glob:
+        result = {}
+        for path in expanded_paths:
+            try:
+                result[str(path)] = mmcif.parse_mmcif(str(path))
+            except Exception as e:
+                raise RuntimeError(f"Failed to parse mmCIF file {path}: {e}") from e
+        return result
+    else:
+        # No glob patterns, use original batch processing
+        try:
+            str_paths = [str(p) for p in expanded_paths]
+            return mmcif.parse_mmcif_batch(str_paths)
+        except Exception as e:
+            raise RuntimeError(f"Failed to parse mmCIF files in batch: {e}") from e
 
 # Export public API
 __all__ = [

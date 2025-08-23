@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Test that Python examples from README execute without errors."""
 
+from __future__ import annotations
+
 import os
 import sys
 

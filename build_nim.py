@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Build script for nim-mmcif."""
 
+from __future__ import annotations
+
 import os
 import platform
 import subprocess
