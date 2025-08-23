@@ -62,3 +62,17 @@ proc get_atom_positions(filepath: string): seq[tuple[x, y, z: float]] {.exportpy
   ##   ParseError: If parsing fails.
   let parsed = mmcif_parse(filepath)
   return parsed.atoms.mapIt((x: it.x, y: it.y, z: it.z))
+
+proc parse_mmcif_batch(filepaths: seq[string]): seq[mmCIF] {.exportpy.} =
+  ## Parse multiple mmCIF files and return a sequence of mmCIF structures.
+  ##
+  ## Args:
+  ##   filepaths: Sequence of paths to mmCIF files.
+  ##
+  ## Returns:
+  ##   Sequence of mmCIF objects containing parsed atoms.
+  ##
+  ## Raises:
+  ##   IOError: If any file cannot be read.
+  ##   ParseError: If parsing fails for any file.
+  return mmcif_parse_batch(filepaths)
