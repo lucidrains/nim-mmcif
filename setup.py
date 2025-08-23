@@ -138,7 +138,7 @@ class NimBuildExt(build_ext):
             nim_cmd = getattr(self, 'nim_cmd', 'nim')
             use_shell = getattr(self, 'use_shell', False)
             
-            cmd = [nim_cmd, 'c', '--app:lib', '--opt:speed', '--threads:on']
+            cmd = [nim_cmd, 'c', '-d:release', '--app:lib', '--opt:speed', '--threads:on']
             
             if system == 'Darwin':  # macOS
                 output_file = 'nim_mmcif.so'

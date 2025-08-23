@@ -20,7 +20,7 @@ def build():
     
     system = platform.system()
     machine = platform.machine()
-    cmd = ['nim', 'c', '--app:lib', '--opt:speed', '--threads:on']
+    cmd = ['nim', 'c', '-d:release', '--app:lib', '--opt:speed', '--threads:on']
     
     if system == 'Darwin':
         cmd.extend(['--cc:clang', '--out:nim_mmcif.so'])

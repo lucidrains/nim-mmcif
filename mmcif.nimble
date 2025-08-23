@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.0.16"
+version       = "0.0.17"
 author        = "lucidrains"
 description   = "Parser for mmCIF"
 license       = "MIT"

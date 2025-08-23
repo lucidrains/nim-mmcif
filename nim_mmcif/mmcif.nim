@@ -200,7 +200,7 @@ proc parseMmcifString*(content: string): mmCIF =
 
 
 proc mmcif_parse*(filepath: string): mmCIF =
-  ## Parse an mmCIF file from disk.
+  ## Parse an mmCIF file from disk line by line.
   ##
   ## Args:
   ##   filepath: Path to the mmCIF file.
@@ -211,17 +211,32 @@ proc mmcif_parse*(filepath: string): mmCIF =
   ## Raises:
   ##   IOError: If file cannot be read.
   ##   ParseError: If file format is invalid.
+  result = mmCIF(atoms: @[])
+  
+  var file: File
   try:
-    let content = readFile(filepath)
-    return parseMmcifString(content)
+    if not open(file, filepath):
+      raise newException(IOError, "Failed to open file: " & filepath)
+    
+    var line: string
+    while file.readLine(line):
+      let trimmedLine = line.strip()
+      if trimmedLine.startsWith(ATOM_RECORD) or trimmedLine.startsWith(HETATM_RECORD):
+        result.atoms.add(parseAtomLine(trimmedLine))
+    
+    close(file)
   except IOError as e:
+    if file != nil:
+      close(file)
     raise newException(IOError, "Failed to read file: " & e.msg)
   except Exception as e:
+    if file != nil:
+      close(file)
     raise newException(ParseError, "Failed to parse mmCIF: " & e.msg)
 
 
 proc mmcif_parse_batch*(filepaths: seq[string]): seq[mmCIF] =
-  ## Parse multiple mmCIF files from disk.
+  ## Parse multiple mmCIF files from disk line by line.
   ##
   ## Args:
   ##   filepaths: Sequence of paths to mmCIF files.
