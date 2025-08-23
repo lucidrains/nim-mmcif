@@ -43,7 +43,7 @@ For detailed platform-specific instructions, see [CROSS_PLATFORM.md](CROSS_PLATF
 
 ### Python Usage
 
-#### Dictionary Access (Default)
+#### Dictionary Access
 
 ```python
 import nim_mmcif
@@ -63,7 +63,7 @@ for filepath, data in results.items():
     print(f"{filepath}: {len(data['atoms'])} atoms")
 ```
 
-#### Dataclass Access with Dot Notation (New!)
+#### Dataclass Access
 
 ```python
 import nim_mmcif
