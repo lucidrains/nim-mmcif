@@ -1,6 +1,6 @@
 ## mmCIF parser module for reading Macromolecular Crystallographic Information Files.
 
-import std/[strutils, sequtils, sets]
+import std/[strutils, sets]
 
 const 
   ATOM_RECORD* = "ATOM"
@@ -8,7 +8,7 @@ const
   
   # Field names in mmCIF atom records
   ATOM_FIELDS* = [
-    "type",
+    "group_PDB",  # This is the first field (ATOM or HETATM)
     "id", 
     "type_symbol",
     "label_atom_id",
@@ -29,10 +29,6 @@ const
     "auth_asym_id",
     "auth_atom_id",
     "pdbx_PDB_model_num",
-    "group_PDB",
-    "pdbx_sifts_xref_db_acc",
-    "pdbx_sifts_xref_db_name",
-    "pdbx_sifts_xref_db_num",
   ]
   
   # Fields that should be parsed as integers
@@ -120,10 +116,56 @@ proc parseStringValue(value: string): string =
   return value
 
 
+proc tokenizeLine*(line: string): seq[string] =
+  ## Tokenize a line respecting quoted values.
+  ## Handles both single and double quotes, and preserves spaces within quotes.
+  result = @[]
+  var 
+    current = ""
+    inQuote = false
+    quoteChar = '\0'
+    i = 0
+  
+  while i < line.len:
+    let ch = line[i]
+    
+    if not inQuote:
+      if ch in ['"', '\'']:
+        # Start of quoted value - don't include the quote itself
+        inQuote = true
+        quoteChar = ch
+      elif ch in Whitespace:
+        # End of token (if any)
+        if current.len > 0:
+          result.add(current)
+          current = ""
+      else:
+        # Regular character
+        current.add(ch)
+    else:
+      # Inside a quote
+      if ch == quoteChar:
+        # End of quoted value - don't include the closing quote
+        inQuote = false
+        quoteChar = '\0'
+        # Add the quoted value (even if empty)
+        result.add(current)
+        current = ""
+      else:
+        # Character inside quote
+        current.add(ch)
+    
+    inc(i)
+  
+  # Add any remaining token
+  if current.len > 0:
+    result.add(current)
+
+
 proc parseAtomLine(line: string): Atom =
   ## Parse a single ATOM or HETATM line into an Atom object.
   var atom = Atom()
-  let tokens = line.split(Whitespace).filterIt(it.len > 0)
+  let tokens = tokenizeLine(line)
   
   for i, token in tokens:
     if i >= ATOM_FIELDS.len:
@@ -132,8 +174,9 @@ proc parseAtomLine(line: string): Atom =
     let field = ATOM_FIELDS[i]
     
     case field
-    of "type":
+    of "group_PDB":
       atom.`type` = token
+      atom.group_PDB = token
     of "id":
       atom.id = parseIntValue(token)
     of "type_symbol":
@@ -177,26 +220,8 @@ proc parseAtomLine(line: string): Atom =
       atom.auth_atom_id = parseStringValue(token)
     of "pdbx_PDB_model_num":
       atom.pdbx_PDB_model_num = parseIntValue(token)
-    of "group_PDB":
-      atom.group_PDB = parseStringValue(token)
-    of "pdbx_sifts_xref_db_acc":
-      atom.pdbx_sifts_xref_db_acc = parseStringValue(token)
-    of "pdbx_sifts_xref_db_name":
-      atom.pdbx_sifts_xref_db_name = parseStringValue(token)
-    of "pdbx_sifts_xref_db_num":
-      atom.pdbx_sifts_xref_db_num = parseIntValue(token)
   
   return atom
-
-
-proc parseMmcifString*(content: string): mmCIF =
-  ## Parse mmCIF content from a string.
-  result = mmCIF(atoms: @[])
-  
-  for line in content.splitLines:
-    let trimmedLine = line.strip()
-    if trimmedLine.startsWith(ATOM_RECORD) or trimmedLine.startsWith(HETATM_RECORD):
-      result.atoms.add(parseAtomLine(trimmedLine))
 
 
 proc mmcif_parse*(filepath: string): mmCIF =
@@ -214,24 +239,20 @@ proc mmcif_parse*(filepath: string): mmCIF =
   result = mmCIF(atoms: @[])
   
   var file: File
+  if not open(file, filepath):
+    raise newException(IOError, "Failed to open file: " & filepath)
+  
+  defer: close(file)  # Automatically close file when leaving scope
+  
   try:
-    if not open(file, filepath):
-      raise newException(IOError, "Failed to open file: " & filepath)
-    
     var line: string
     while file.readLine(line):
       let trimmedLine = line.strip()
       if trimmedLine.startsWith(ATOM_RECORD) or trimmedLine.startsWith(HETATM_RECORD):
         result.atoms.add(parseAtomLine(trimmedLine))
-    
-    close(file)
   except IOError as e:
-    if file != nil:
-      close(file)
     raise newException(IOError, "Failed to read file: " & e.msg)
   except Exception as e:
-    if file != nil:
-      close(file)
     raise newException(ParseError, "Failed to parse mmCIF: " & e.msg)
 
 
