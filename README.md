@@ -7,9 +7,7 @@ The goal of this repository is to experiment with vibe coding while building som
 ## Features
 
 - 🚀 High-performance parsing of mmCIF files using Nim
-- 🐍 Seamless Python integration via nimporter
 - 🌍 Cross-platform support (Linux, macOS, Windows)
-- 🏗️ Automatic compilation on import
 - 📦 Easy installation via pip
 
 ## Installation
@@ -184,7 +182,6 @@ pytest tests/ -v
 ## Documentation
 
 - [Cross-Platform Guide](CROSS_PLATFORM.md) - Platform-specific build instructions
-- [Nimporter Setup](NIMPORTER_SETUP.md) - Details on nimporter integration
 
 ## Performance
 
