@@ -11,6 +11,9 @@ from typing import Any
 # Version information
 from ._version import __version__
 
+# Dataclass support
+from .dataclasses import Atom, MmcifData, dict_to_dataclass
+
 # First, try to import the pre-compiled extension directly
 mmcif = None
 _import_error = None
@@ -197,16 +200,21 @@ def _expand_glob(pattern: str | Path) -> list[Path]:
     return sorted(mmcif_files)  # Sort for consistent ordering
 
 # Re-export the functions with Python-friendly wrappers
-def parse_mmcif(filepath: str | Path) -> dict[str, Any] | dict[str, dict[str, Any]]:
+def parse_mmcif(filepath: str | Path, as_dataclass: bool = False) -> dict[str, Any] | dict[str, dict[str, Any]] | MmcifData | dict[str, MmcifData]:
     """
     Parse an mmCIF file or files matching a glob pattern using the Nim backend.
 
     Args:
         filepath: Path to the mmCIF file or glob pattern.
+        as_dataclass: If True, return MmcifData dataclass(es) instead of dict(s).
 
     Returns:
-        If filepath is a single file: Dictionary containing parsed mmCIF data with 'atoms' key.
-        If filepath is a glob pattern: Dictionary mapping file paths to parsed mmCIF data.
+        If as_dataclass is False:
+            - Single file: Dictionary containing parsed mmCIF data with 'atoms' key.
+            - Glob pattern: Dictionary mapping file paths to parsed mmCIF data.
+        If as_dataclass is True:
+            - Single file: MmcifData instance with typed atom access.
+            - Glob pattern: Dictionary mapping file paths to MmcifData instances.
 
     Raises:
         FileNotFoundError: If the file doesn't exist or no files match the glob pattern.
@@ -222,11 +230,12 @@ def parse_mmcif(filepath: str | Path) -> dict[str, Any] | dict[str, dict[str, An
                 result[str(file_path)] = mmcif.parse_mmcif(str(file_path))
             except Exception as e:
                 raise RuntimeError(f"Failed to parse mmCIF file {file_path}: {e}") from e
-        return result
+        return dict_to_dataclass(result) if as_dataclass else result
     else:
         # Single file case
         try:
-            return mmcif.parse_mmcif(_validate_filepath(filepath))
+            result = mmcif.parse_mmcif(_validate_filepath(filepath))
+            return dict_to_dataclass(result) if as_dataclass else result
         except FileNotFoundError:
             raise
         except Exception as e:
@@ -295,17 +304,22 @@ def get_atom_positions(filepath: str | Path) -> list[tuple[float, float, float]]
     except Exception as e:
         raise RuntimeError(f"Failed to get atom positions: {e}") from e
 
-def parse_mmcif_batch(filepaths: list[str | Path] | str | Path) -> list[dict[str, Any]] | dict[str, dict[str, Any]]:
+def parse_mmcif_batch(filepaths: list[str | Path] | str | Path, as_dataclass: bool = False) -> list[dict[str, Any]] | dict[str, dict[str, Any]] | list[MmcifData] | dict[str, MmcifData]:
     """
     Parse multiple mmCIF files using the Nim backend.
 
     Args:
         filepaths: List of paths to mmCIF files, a single path, or a glob pattern.
                   If a single string with glob patterns is provided, it will be expanded.
+        as_dataclass: If True, return MmcifData dataclass(es) instead of dict(s).
 
     Returns:
-        If no glob patterns are used: List of dictionaries, each containing parsed mmCIF data.
-        If glob patterns are used: Dictionary mapping file paths to parsed mmCIF data.
+        If as_dataclass is False:
+            - No glob patterns: List of dictionaries, each containing parsed mmCIF data.
+            - With glob patterns: Dictionary mapping file paths to parsed mmCIF data.
+        If as_dataclass is True:
+            - No glob patterns: List of MmcifData instances with typed atom access.
+            - With glob patterns: Dictionary mapping file paths to MmcifData instances.
 
     Raises:
         FileNotFoundError: If any file doesn't exist or no files match glob pattern.
@@ -322,7 +336,7 @@ def parse_mmcif_batch(filepaths: list[str | Path] | str | Path) -> list[dict[str
                     result[str(file_path)] = mmcif.parse_mmcif(str(file_path))
                 except Exception as e:
                     raise RuntimeError(f"Failed to parse mmCIF file {file_path}: {e}") from e
-            return result
+            return dict_to_dataclass(result) if as_dataclass else result
         else:
             # Single file, treat as batch of one
             filepaths = [filepaths]
@@ -352,12 +366,13 @@ def parse_mmcif_batch(filepaths: list[str | Path] | str | Path) -> list[dict[str
                 result[str(path)] = mmcif.parse_mmcif(str(path))
             except Exception as e:
                 raise RuntimeError(f"Failed to parse mmCIF file {path}: {e}") from e
-        return result
+        return dict_to_dataclass(result) if as_dataclass else result
     else:
         # No glob patterns, use original batch processing
         try:
             str_paths = [str(p) for p in expanded_paths]
-            return mmcif.parse_mmcif_batch(str_paths)
+            result = mmcif.parse_mmcif_batch(str_paths)
+            return dict_to_dataclass(result) if as_dataclass else result
         except Exception as e:
             raise RuntimeError(f"Failed to parse mmCIF files in batch: {e}") from e
 
@@ -368,5 +383,7 @@ __all__ = [
     'get_atom_count',
     'get_atoms',
     'get_atom_positions',
+    'Atom',
+    'MmcifData',
     '__version__'
 ]

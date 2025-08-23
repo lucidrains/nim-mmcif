@@ -43,29 +43,68 @@ For detailed platform-specific instructions, see [CROSS_PLATFORM.md](CROSS_PLATF
 
 ### Python Usage
 
+#### Dictionary Access (Default)
+
 ```python
 import nim_mmcif
 
-# Parse an mmCIF file
+# Parse an mmCIF file (returns dict by default)
 data = nim_mmcif.parse_mmcif("path/to/file.mmcif")
 print(f"Found {len(data['atoms'])} atoms")
 
+# Access atom properties using dictionary notation
+first_atom = data['atoms'][0]
+print(f"Atom {first_atom['id']}: {first_atom['label_atom_id']}")
+print(f"Position: ({first_atom['x']}, {first_atom['y']}, {first_atom['z']})")
+
 # Parse multiple files using glob patterns
-# Returns dict[str, dict] mapping filepaths to parsed data
 results = nim_mmcif.parse_mmcif("path/to/*.mmcif")
 for filepath, data in results.items():
     print(f"{filepath}: {len(data['atoms'])} atoms")
+```
 
-# Parse with recursive glob patterns
-results = nim_mmcif.parse_mmcif("path/**/*.mmcif")
-for filepath, data in results.items():
-    print(f"{filepath}: {len(data['atoms'])} atoms")
+#### Dataclass Access with Dot Notation (New!)
 
+```python
+import nim_mmcif
+
+# Parse with dataclass support for cleaner dot notation access
+data = nim_mmcif.parse_mmcif("path/to/file.mmcif", as_dataclass=True)
+print(f"Found {data.atom_count} atoms")
+
+# Access atom properties using dot notation
+first_atom = data.atoms[0]
+print(f"Atom {first_atom.id}: {first_atom.label_atom_id}")
+print(f"Position: ({first_atom.x}, {first_atom.y}, {first_atom.z})")
+print(f"Chain: {first_atom.label_asym_id}, Residue: {first_atom.label_comp_id}")
+
+# Use convenience properties and methods
+print(f"Unique chains: {data.chains}")
+print(f"Number of residues: {len(data.residues)}")
+
+# Get all atoms from a specific chain
+chain_a_atoms = data.get_chain('A')
+
+# Get all atoms from a specific residue
+residue_atoms = data.get_residue('A', 1)
+
+# Get all positions as tuples
+positions = data.positions  # List of (x, y, z) tuples
+
+# Batch processing with dataclasses
+results = nim_mmcif.parse_mmcif_batch(["file1.mmcif", "file2.mmcif"], as_dataclass=True)
+for result in results:
+    print(f"Structure has {result.atom_count} atoms in {len(result.chains)} chain(s)")
+```
+
+#### Other Functions
+
+```python
 # Get atom count directly
 count = nim_mmcif.get_atom_count("path/to/file.mmcif")
 print(f"File contains {count} atoms")
 
-# Get all atoms with their properties
+# Get all atoms with their properties (returns list of dicts)
 atoms = nim_mmcif.get_atoms("path/to/file.mmcif")
 for atom in atoms[:5]:  # Print first 5 atoms
     print(f"Atom {atom['id']}: {atom['label_atom_id']} at ({atom['x']}, {atom['y']}, {atom['z']})")
@@ -158,17 +197,26 @@ The batch function provides better performance than individual parsing when proc
 
 ### Functions
 
-#### `parse_mmcif(filepath: str) -> dict | dict[str, dict]`
+#### `parse_mmcif(filepath: str, as_dataclass: bool = False) -> dict | MmcifData | dict[str, dict] | dict[str, MmcifData]`
 Parse an mmCIF file or files matching a glob pattern.
-- **Single file**: Returns a dictionary with parsed data containing 'atoms' key
-- **Glob pattern**: Returns a dictionary mapping file paths to parsed data
+- **filepath**: Path to mmCIF file or glob pattern
+- **as_dataclass**: If True, returns MmcifData dataclass(es) with dot notation access
+- **Returns**:
+  - Single file + dict: Dictionary with 'atoms' key
+  - Single file + dataclass: MmcifData instance
+  - Glob pattern + dict: Dictionary mapping file paths to parsed data
+  - Glob pattern + dataclass: Dictionary mapping file paths to MmcifData instances
 - Supports wildcards: `*` (any characters), `?` (single character), `**` (recursive)
 
-#### `parse_mmcif_batch(filepaths: list[str] | str) -> list[dict] | dict[str, dict]`
+#### `parse_mmcif_batch(filepaths: list[str] | str, as_dataclass: bool = False) -> list[dict] | list[MmcifData] | dict[str, dict] | dict[str, MmcifData]`
 Parse multiple mmCIF files in a single operation.
-- **No glob patterns**: Returns a list of dictionaries with parsed data
-- **With glob patterns**: Returns a dictionary mapping file paths to parsed data
-- Accepts a single path/pattern or a list of paths/patterns
+- **filepaths**: List of paths, single path, or glob pattern
+- **as_dataclass**: If True, returns MmcifData dataclass(es) with dot notation access
+- **Returns**:
+  - No glob + dict: List of dictionaries with parsed data
+  - No glob + dataclass: List of MmcifData instances
+  - With glob + dict: Dictionary mapping file paths to parsed data
+  - With glob + dataclass: Dictionary mapping file paths to MmcifData instances
 - More efficient than parsing files individually when processing multiple structures
 
 #### `get_atom_count(filepath: str) -> int`
@@ -180,9 +228,47 @@ Get all atoms from an mmCIF file as a list of dictionaries.
 #### `get_atom_positions(filepath: str) -> list[tuple[float, float, float]]`
 Get 3D coordinates of all atoms as a list of (x, y, z) tuples.
 
-### Atom Properties
+### Dataclasses
 
-Each atom dictionary contains:
+#### `MmcifData`
+Container for parsed mmCIF data with typed atom access.
+
+**Properties:**
+- `atoms`: List of Atom objects
+- `atom_count`: Total number of atoms
+- `positions`: List of (x, y, z) tuples for all atoms
+- `chains`: Set of unique chain identifiers
+- `residues`: Set of unique (chain_id, seq_id) tuples
+
+**Methods:**
+- `get_chain(chain_id: str)`: Get all atoms from a specific chain
+- `get_residue(chain_id: str, seq_id: int)`: Get all atoms from a specific residue
+- `to_dict()`: Convert back to dictionary format
+
+#### `Atom`
+Represents a single atom with typed properties accessible via dot notation.
+
+**Properties:**
+- `type`: Record type (ATOM or HETATM)
+- `id`: Atom serial number
+- `type_symbol`: Element symbol
+- `label_atom_id`: Atom name
+- `label_comp_id`: Residue name
+- `label_asym_id`: Chain identifier
+- `label_entity_id`: Entity ID
+- `label_seq_id`: Residue sequence number
+- `Cartn_x`, `Cartn_y`, `Cartn_z`: 3D coordinates
+- `x`, `y`, `z`: Convenient aliases for coordinates
+- `occupancy`: Occupancy factor
+- `B_iso_or_equiv`: B-factor (temperature factor)
+- `position`: Tuple of (x, y, z) coordinates
+
+**Methods:**
+- `to_dict()`: Convert back to dictionary format
+
+### Dictionary Format
+
+When using the default dictionary format (as_dataclass=False), each atom dictionary contains:
 - `type`: Record type (ATOM or HETATM)
 - `id`: Atom serial number
 - `label_atom_id`: Atom name
