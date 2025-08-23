@@ -17,7 +17,7 @@ The goal of this repository is to experiment with vibe coding while building som
 - Python 3.8 or higher
 - Nim compiler (see [platform-specific instructions](CROSS_PLATFORM.md))
 
-### From PyPI (when available)
+### From PyPI
 
 ```bash
 pip install nim-mmcif
