@@ -164,6 +164,14 @@ if mmcif is None:
     raise ImportError("Failed to import nim_mmcif module through any method")
 
 
+# Helper function to validate file path
+def _validate_filepath(filepath: Union[str, Path]) -> str:
+    """Convert path to string and validate it exists."""
+    filepath = Path(filepath)
+    if not filepath.exists():
+        raise FileNotFoundError(f"mmCIF file not found: {filepath}")
+    return str(filepath)
+
 # Re-export the functions with Python-friendly wrappers
 def parse_mmcif(filepath: Union[str, Path]) -> Dict[str, Any]:
     """
@@ -179,13 +187,10 @@ def parse_mmcif(filepath: Union[str, Path]) -> Dict[str, Any]:
         FileNotFoundError: If the file doesn't exist.
         RuntimeError: If parsing fails.
     """
-    filepath = Path(filepath)
-
-    if not filepath.exists():
-        raise FileNotFoundError(f"mmCIF file not found: {filepath}")
-
     try:
-        return mmcif.parse_mmcif(str(filepath))
+        return mmcif.parse_mmcif(_validate_filepath(filepath))
+    except FileNotFoundError:
+        raise
     except Exception as e:
         raise RuntimeError(f"Failed to parse mmCIF file: {e}") from e
 
@@ -203,13 +208,10 @@ def get_atom_count(filepath: Union[str, Path]) -> int:
         FileNotFoundError: If the file doesn't exist.
         RuntimeError: If counting fails.
     """
-    filepath = Path(filepath)
-
-    if not filepath.exists():
-        raise FileNotFoundError(f"mmCIF file not found: {filepath}")
-
     try:
-        return mmcif.get_atom_count(str(filepath))
+        return mmcif.get_atom_count(_validate_filepath(filepath))
+    except FileNotFoundError:
+        raise
     except Exception as e:
         raise RuntimeError(f"Failed to get atom count: {e}") from e
 
@@ -227,13 +229,10 @@ def get_atoms(filepath: Union[str, Path]) -> List[Dict[str, Any]]:
         FileNotFoundError: If the file doesn't exist.
         RuntimeError: If reading atoms fails.
     """
-    filepath = Path(filepath)
-
-    if not filepath.exists():
-        raise FileNotFoundError(f"mmCIF file not found: {filepath}")
-
     try:
-        return mmcif.get_atoms(str(filepath))
+        return mmcif.get_atoms(_validate_filepath(filepath))
+    except FileNotFoundError:
+        raise
     except Exception as e:
         raise RuntimeError(f"Failed to get atoms: {e}") from e
 
@@ -251,13 +250,10 @@ def get_atom_positions(filepath: Union[str, Path]) -> List[Tuple[float, float, f
         FileNotFoundError: If the file doesn't exist.
         RuntimeError: If reading positions fails.
     """
-    filepath = Path(filepath)
-
-    if not filepath.exists():
-        raise FileNotFoundError(f"mmCIF file not found: {filepath}")
-
     try:
-        return mmcif.get_atom_positions(str(filepath))
+        return mmcif.get_atom_positions(_validate_filepath(filepath))
+    except FileNotFoundError:
+        raise
     except Exception as e:
         raise RuntimeError(f"Failed to get atom positions: {e}") from e
 
@@ -275,16 +271,11 @@ def parse_mmcif_batch(filepaths: List[Union[str, Path]]) -> List[Dict[str, Any]]
         FileNotFoundError: If any file doesn't exist.
         RuntimeError: If parsing fails for any file.
     """
-    # Convert all paths to strings and check they exist
-    str_paths = []
-    for filepath in filepaths:
-        filepath = Path(filepath)
-        if not filepath.exists():
-            raise FileNotFoundError(f"mmCIF file not found: {filepath}")
-        str_paths.append(str(filepath))
-
     try:
+        str_paths = [_validate_filepath(fp) for fp in filepaths]
         return mmcif.parse_mmcif_batch(str_paths)
+    except FileNotFoundError:
+        raise
     except Exception as e:
         raise RuntimeError(f"Failed to parse mmCIF files in batch: {e}") from e
 

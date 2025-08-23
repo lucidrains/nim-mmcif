@@ -70,20 +70,20 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            nim c --app:lib --dynlibOverride:python3 --passL:"-static-libgcc -static-libstdc++" --out:python_bindings.dll nim_mmcif/python_bindings.nim
+            nim c --app:lib --dynlibOverride:python3 --passL:"-static-libgcc -static-libstdc++" --out:nim_mmcif.dll nim_mmcif/nim_mmcif.nim
           else
-            nim c --app:lib --out:python_bindings.so nim_mmcif/python_bindings.nim
+            nim c --app:lib --out:nim_mmcif.so nim_mmcif/nim_mmcif.nim
           fi
       
       - name: Rename Python module with correct extension
         shell: bash
         run: |
           if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-            mv python_bindings.so python_bindings${{ matrix.python-ext }}
+            mv nim_mmcif.so nim_mmcif${{ matrix.python-ext }}
           elif [[ "${{ matrix.os }}" == "macos"* ]]; then
-            mv python_bindings.so python_bindings${{ matrix.python-ext }}
+            mv nim_mmcif.so nim_mmcif${{ matrix.python-ext }}
           elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            mv python_bindings.dll python_bindings${{ matrix.python-ext }}
+            mv nim_mmcif.dll nim_mmcif${{ matrix.python-ext }}
           fi
       
       - name: Install pytest
@@ -100,7 +100,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: python-module-${{ matrix.os }}-${{ matrix.arch }}
-          path: python_bindings${{ matrix.python-ext }}
+          path: nim_mmcif${{ matrix.python-ext }}
           retention-days: 30
 
   package-python-wheel:
