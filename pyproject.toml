@@ -1,10 +1,6 @@
 [build-system]
-requires = [
-    "setuptools>=61.0",
-    "wheel",
-    "nimporter>=1.1.0"
-]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-build-scripts"]
+build-backend = "hatchling.build"
 
 [project]
 name = "nim-mmcif"
@@ -16,10 +12,7 @@ authors = [
     {name = "lucidrains", email = "lucidrains@gmail.com"}
 ]
 requires-python = ">=3.8"
-dependencies = [
-    "setuptools>=61.0",
-    "nimporter>=1.1.0"
-]
+dependencies = []
 
 keywords = [
     "mmcif",
@@ -60,24 +53,73 @@ classifiers = [
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
+    "hatch",
+    "hatch-build-scripts",
 ]
 test = [
     "pytest>=7.0",
 ]
+build = [
+    "hatch",
+    "hatch-build-scripts",
+    "cibuildwheel>=2.16.0",
+]
 
-[tool.setuptools]
+[tool.hatch.version]
+path = "nim_mmcif/_version.py"
+
+[tool.hatch.build.targets.wheel]
 packages = ["nim_mmcif"]
-license-files = []
+artifacts = ["*.pyd", "*.so", "*.dylib"]
 
-[tool.setuptools.dynamic]
-version = {attr = "nim_mmcif._version.__version__"}
+[[tool.hatch.build.targets.wheel.hooks.build-scripts.scripts]]
+artifacts = ["nim_mmcif/*.pyd", "nim_mmcif/*.so", "nim_mmcif/*.dylib"]
+commands = [
+    "python build_nim.py"
+]
 
-[tool.setuptools.package-data]
-nim_mmcif = [
-    "*.nim",
-    "*.c",
-    "*.so",
-    "*.pyd"
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "hatch_build.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/nim_mmcif",
+    "/tests",
+    "/build_nim.py",
+    "/hatch_build.py",
+    "/README.md",
+    "/LICENSE",
+    "/pyproject.toml",
+    "/MANIFEST.in",
+    "/mmcif.nimble"
+]
+
+[tool.cibuildwheel]
+build = "cp38-* cp39-* cp310-* cp311-* cp312-*"
+skip = "*-musllinux_*"
+test-requires = "pytest"
+test-command = "pytest {project}/tests -v"
+
+[tool.cibuildwheel.linux]
+environment = { PATH = "$HOME/.nimble/bin:$HOME/.local/share/grabnim/current/bin:$PATH" }
+before-all = [
+    "curl https://codeberg.org/janAkali/grabnim/raw/branch/master/misc/install.sh -sSf | sh",
+    "grabnim",
+    "nimble install nimpy -y"
+]
+
+[tool.cibuildwheel.macos]
+environment = { PATH = "$HOME/.nimble/bin:$PATH" }
+before-all = [
+    "brew install nim",
+    "nimble install nimpy -y"
+]
+
+[tool.cibuildwheel.windows]
+before-all = [
+    "choco install nim -y",
+    "refreshenv",
+    "nimble install nimpy -y"
 ]
 
 [tool.pytest.ini_options]
