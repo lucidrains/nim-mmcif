@@ -65,12 +65,57 @@ for i, (x, y, z) in enumerate(positions[:5]):
     print(f"Position {i}: ({x:.3f}, {y:.3f}, {z:.3f})")
 ```
 
+### Batch Processing
+
+Process multiple mmCIF files efficiently in a single operation:
+
+```python
+import nim_mmcif
+
+# List of mmCIF files to process
+files = [
+    "path/to/structure1.mmcif",
+    "path/to/structure2.mmcif",
+    "path/to/structure3.mmcif"
+]
+
+# Parse all files in batch
+results = nim_mmcif.parse_mmcif_batch(files)
+
+# Process results
+for i, data in enumerate(results):
+    print(f"Structure {i+1}: {len(data['atoms'])} atoms")
+    
+    # Analyze each structure
+    atoms = data['atoms']
+    if atoms:
+        # Get unique chain IDs
+        chains = set(atom['label_asym_id'] for atom in atoms)
+        print(f"  Chains: {', '.join(sorted(chains))}")
+        
+        # Count residues
+        residues = set((atom['label_asym_id'], atom['label_seq_id']) 
+                      for atom in atoms)
+        print(f"  Residues: {len(residues)}")
+```
+
+Batch processing is particularly useful when:
+- Analyzing multiple protein structures for comparative studies
+- Processing entire datasets of crystallographic structures
+- Building machine learning datasets from PDB files
+- Performing high-throughput structural analysis
+
+The batch function provides better performance than individual parsing when processing multiple files, as it reduces the overhead of repeated function calls.
+
 ## API Reference
 
 ### Functions
 
 #### `parse_mmcif(filepath: str) -> dict`
 Parse an mmCIF file and return a dictionary with parsed data.
+
+#### `parse_mmcif_batch(filepaths: list[str]) -> list[dict]`
+Parse multiple mmCIF files in a single operation. More efficient than parsing files individually when processing multiple structures.
 
 #### `get_atom_count(filepath: str) -> int`
 Get the number of atoms in an mmCIF file.

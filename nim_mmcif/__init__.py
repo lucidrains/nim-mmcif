@@ -261,9 +261,37 @@ def get_atom_positions(filepath: Union[str, Path]) -> List[Tuple[float, float, f
     except Exception as e:
         raise RuntimeError(f"Failed to get atom positions: {e}") from e
 
+def parse_mmcif_batch(filepaths: List[Union[str, Path]]) -> List[Dict[str, Any]]:
+    """
+    Parse multiple mmCIF files using the Nim backend.
+
+    Args:
+        filepaths: List of paths to mmCIF files.
+
+    Returns:
+        List of dictionaries, each containing parsed mmCIF data with 'atoms' key.
+
+    Raises:
+        FileNotFoundError: If any file doesn't exist.
+        RuntimeError: If parsing fails for any file.
+    """
+    # Convert all paths to strings and check they exist
+    str_paths = []
+    for filepath in filepaths:
+        filepath = Path(filepath)
+        if not filepath.exists():
+            raise FileNotFoundError(f"mmCIF file not found: {filepath}")
+        str_paths.append(str(filepath))
+
+    try:
+        return mmcif.parse_mmcif_batch(str_paths)
+    except Exception as e:
+        raise RuntimeError(f"Failed to parse mmCIF files in batch: {e}") from e
+
 # Export public API
 __all__ = [
     'parse_mmcif',
+    'parse_mmcif_batch',
     'get_atom_count',
     'get_atoms',
     'get_atom_positions',

@@ -201,3 +201,20 @@ proc mmcif_parse*(filepath: string): mmCIF =
     raise newException(IOError, "Failed to read file: " & e.msg)
   except Exception as e:
     raise newException(ParseError, "Failed to parse mmCIF: " & e.msg)
+
+
+proc mmcif_parse_batch*(filepaths: seq[string]): seq[mmCIF] =
+  ## Parse multiple mmCIF files from disk.
+  ##
+  ## Args:
+  ##   filepaths: Sequence of paths to mmCIF files.
+  ##
+  ## Returns:
+  ##   Sequence of parsed mmCIF objects containing atoms.
+  ##
+  ## Raises:
+  ##   IOError: If any file cannot be read.
+  ##   ParseError: If any file format is invalid.
+  result = @[]
+  for filepath in filepaths:
+    result.add(mmcif_parse(filepath))
