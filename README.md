@@ -1,6 +1,6 @@
 # nim-mmcif
 
-Fast mmCIF (Macromolecular Crystallographic Information File) parser written in Nim with Python bindings via [nimporter](https://github.com/Pebaz/nimporter).
+Fast mmCIF (Macromolecular Crystallographic Information File) parser written in Nim with Python bindings
 
 The goal of this repository is to experiment with vibe coding while building something useful for bioinformatics community, to see how much of a cross platform library can be driven to completion by transformers
 
