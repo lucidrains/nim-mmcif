@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 
 @dataclass
@@ -42,13 +42,13 @@ class Atom:
     B_iso_or_equiv: float
     
     # Optional fields that may be present
-    pdbx_PDB_ins_code: Optional[str] = None
-    pdbx_formal_charge: Optional[int] = None
-    auth_seq_id: Optional[int] = None
-    auth_comp_id: Optional[str] = None
-    auth_asym_id: Optional[str] = None
-    auth_atom_id: Optional[str] = None
-    pdbx_PDB_model_num: Optional[int] = None
+    pdbx_PDB_ins_code: str | None = None
+    pdbx_formal_charge: int | None = None
+    auth_seq_id: int | None = None
+    auth_comp_id: str | None = None
+    auth_asym_id: str | None = None
+    auth_atom_id: str | None = None
+    pdbx_PDB_model_num: int | None = None
     
     def __post_init__(self):
         """Set coordinate aliases after initialization."""
@@ -57,7 +57,7 @@ class Atom:
         self.z = self.Cartn_z
     
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> Atom:
+    def from_dict(cls, data: dict[str, Any]) -> Atom:
         """
         Create an Atom instance from a dictionary.
         
@@ -81,7 +81,7 @@ class Atom:
         
         return cls(**filtered_data)
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """
         Convert the Atom back to a dictionary.
         
@@ -142,10 +142,10 @@ class MmcifData:
         data.atom_count
     """
     
-    atoms: List[Atom]
+    atoms: list[Atom]
     
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> MmcifData:
+    def from_dict(cls, data: dict[str, Any]) -> MmcifData:
         """
         Create an MmcifData instance from a dictionary.
         
@@ -158,7 +158,7 @@ class MmcifData:
         atoms = [Atom.from_dict(atom_dict) for atom_dict in data.get('atoms', [])]
         return cls(atoms=atoms)
     
-    def to_dict(self) -> Dict[str, List[Dict[str, Any]]]:
+    def to_dict(self) -> dict[str, list[dict[str, Any]]]:
         """
         Convert back to dictionary format.
         
@@ -175,7 +175,7 @@ class MmcifData:
         return len(self.atoms)
     
     @property
-    def positions(self) -> List[tuple[float, float, float]]:
+    def positions(self) -> list[tuple[float, float, float]]:
         """Get all atom positions as a list of tuples."""
         return [atom.position for atom in self.atoms]
     
@@ -189,11 +189,11 @@ class MmcifData:
         """Get unique residues as (chain_id, seq_id) tuples."""
         return {(atom.label_asym_id, atom.label_seq_id) for atom in self.atoms}
     
-    def get_chain(self, chain_id: str) -> List[Atom]:
+    def get_chain(self, chain_id: str) -> list[Atom]:
         """Get all atoms from a specific chain."""
         return [atom for atom in self.atoms if atom.label_asym_id == chain_id]
     
-    def get_residue(self, chain_id: str, seq_id: int) -> List[Atom]:
+    def get_residue(self, chain_id: str, seq_id: int) -> list[Atom]:
         """Get all atoms from a specific residue."""
         return [
             atom for atom in self.atoms 
@@ -201,7 +201,7 @@ class MmcifData:
         ]
 
 
-def dict_to_dataclass(data: Union[Dict, List]) -> Union[MmcifData, List[MmcifData], Dict[str, MmcifData]]:
+def dict_to_dataclass(data: dict | list) -> MmcifData | list[MmcifData] | dict[str, MmcifData]:
     """
     Convert dictionary results to dataclass format.
     
@@ -226,7 +226,7 @@ def dict_to_dataclass(data: Union[Dict, List]) -> Union[MmcifData, List[MmcifDat
         raise TypeError(f"Unexpected data type: {type(data)}")
 
 
-def dataclass_to_dict(data: Union[MmcifData, List[MmcifData], Dict[str, MmcifData]]) -> Union[Dict, List, Dict[str, Dict]]:
+def dataclass_to_dict(data: MmcifData | list[MmcifData] | dict[str, MmcifData]) -> dict | list | dict[str, dict]:
     """
     Convert dataclass results back to dictionary format.
     
