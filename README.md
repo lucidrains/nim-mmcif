@@ -117,8 +117,16 @@ for i, (x, y, z) in enumerate(positions[:5]):
 
 ### Nim Usage
 
+First
+
+```shell
+$ nimble install nim_mmcif
+```
+
+Then
+
 ```nim
-import nim_mmcif/mmcif
+import nim_mmcif
 
 # Parse an mmCIF file
 let data = mmcif_parse("path/to/file.mmcif")

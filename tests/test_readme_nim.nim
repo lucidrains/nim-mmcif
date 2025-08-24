@@ -1,6 +1,6 @@
 ## Test that Nim example from README executes without errors
 
-import ../nim_mmcif/mmcif
+import ../nim_mmcif
 import os
 
 proc testReadmeNimExample() =

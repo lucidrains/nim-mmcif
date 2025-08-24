@@ -1,5 +1,5 @@
 import unittest
-import ../nim_mmcif/mmcif
+import ../nim_mmcif
 import os
 
 test "can parse mmcif file":

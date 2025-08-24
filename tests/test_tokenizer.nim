@@ -1,4 +1,4 @@
-import ../nim_mmcif/mmcif
+import ../nim_mmcif
 
 # Test the tokenizer with a sample line
 let testLine = """ATOM   1  N   "N A"  .  VAL  A  1  1  ?  6.204   16.869  4.854  1.00  49.05  ?  1  VAL  A  "N A"  1"""

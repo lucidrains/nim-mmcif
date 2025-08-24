@@ -1,10 +1,12 @@
 # Package
 
-version       = "0.0.18"
+version       = "0.0.19"
 author        = "lucidrains"
 description   = "Parser for mmCIF"
 license       = "MIT"
-srcDir        = "nim_mmcif"
+srcDir        = "."
+installFiles  = @["nim_mmcif.nim"]
+installDirs   = @["nim_mmcif"]
 
 # Dependencies
 
