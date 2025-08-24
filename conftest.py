@@ -27,7 +27,7 @@ def pytest_sessionstart(session):
             print(result.stderr or result.stdout)
             raise RuntimeError(f"Failed to build Nim extension")
         
-        print("✓ Nim extension built successfully")
+        print("[OK] Nim extension built successfully")
         
     except Exception as e:
         print(f"Error: {e}")
