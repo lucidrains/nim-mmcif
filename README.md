@@ -4,6 +4,8 @@ Fast mmCIF (Macromolecular Crystallographic Information File) parser written in 
 
 The goal of this repository is to experiment with vibe coding while building something useful for bioinformatics community, to see how much of a cross platform library can be driven to completion by transformers
 
+Verdict: I have upgraded to the Max 200$ plan. Opus is the only viable model, at least for me, and can be treated as a superhumanly fast but imperfect junior developer. With right prompting, it can be used to automate a lot of boring work and allow me to focus on the high level creative ones.
+
 ## Features
 
 - 🚀 High-performance parsing of mmCIF files using Nim
