@@ -48,10 +48,10 @@ For detailed platform-specific instructions, see [CROSS_PLATFORM.md](CROSS_PLATF
 #### Dictionary Access
 
 ```python
-import nim_mmcif
+from nim_mmcif import parse_mmcif
 
 # Parse an mmCIF file (returns dict by default)
-data = nim_mmcif.parse_mmcif("path/to/file.mmcif")
+data = parse_mmcif("tests/test.mmcif")
 print(f"Found {len(data['atoms'])} atoms")
 
 # Access atom properties using dictionary notation
@@ -60,7 +60,7 @@ print(f"Atom {first_atom['id']}: {first_atom['label_atom_id']}")
 print(f"Position: ({first_atom['x']}, {first_atom['y']}, {first_atom['z']})")
 
 # Parse multiple files using glob patterns
-results = nim_mmcif.parse_mmcif("path/to/*.mmcif")
+results = parse_mmcif("tests/*.mmcif")
 for filepath, data in results.items():
     print(f"{filepath}: {len(data['atoms'])} atoms")
 ```
@@ -68,10 +68,10 @@ for filepath, data in results.items():
 #### Dataclass Access
 
 ```python
-import nim_mmcif
+from nim_mmcif import parse_mmcif, parse_mmcif_batch
 
 # Parse with dataclass support for cleaner dot notation access
-data = nim_mmcif.parse_mmcif("path/to/file.mmcif", as_dataclass=True)
+data = parse_mmcif("tests/test.mmcif", as_dataclass=True)
 print(f"Found {data.atom_count} atoms")
 
 # Access atom properties using dot notation
@@ -94,25 +94,28 @@ residue_atoms = data.get_residue('A', 1)
 positions = data.positions  # List of (x, y, z) tuples
 
 # Batch processing with dataclasses
-results = nim_mmcif.parse_mmcif_batch(["file1.mmcif", "file2.mmcif"], as_dataclass=True)
+results = parse_mmcif_batch(["tests/test1.mmcif", "tests/test2.mmcif"], as_dataclass=True)
 for result in results:
     print(f"Structure has {result.atom_count} atoms in {len(result.chains)} chain(s)")
+
 ```
 
 #### Other Functions
 
 ```python
+import nim_mmcif
+
 # Get atom count directly
-count = nim_mmcif.get_atom_count("path/to/file.mmcif")
+count = nim_mmcif.get_atom_count("tests/test.mmcif")
 print(f"File contains {count} atoms")
 
 # Get all atoms with their properties (returns list of dicts)
-atoms = nim_mmcif.get_atoms("path/to/file.mmcif")
+atoms = nim_mmcif.get_atoms("tests/test.mmcif")
 for atom in atoms[:5]:  # Print first 5 atoms
     print(f"Atom {atom['id']}: {atom['label_atom_id']} at ({atom['x']}, {atom['y']}, {atom['z']})")
 
 # Get just the 3D coordinates
-positions = nim_mmcif.get_atom_positions("path/to/file.mmcif")
+positions = nim_mmcif.get_atom_positions("tests/test.mmcif")
 for i, (x, y, z) in enumerate(positions[:5]):
     print(f"Position {i}: ({x:.3f}, {y:.3f}, {z:.3f})")
 ```
@@ -131,7 +134,7 @@ Then
 import nim_mmcif
 
 # Parse an mmCIF file
-let data = mmcif_parse("path/to/file.mmcif")
+let data = mmcif_parse("tests/test.mmcif")
 echo "Found ", data.atoms.len, " atoms"
 
 # Iterate through atoms
