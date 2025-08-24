@@ -67,18 +67,9 @@ class Atom:
         Returns:
             Atom instance with populated fields
         """
-        # Extract known fields, ignoring any extras
-        known_fields = {
-            'type', 'id', 'type_symbol', 'label_atom_id', 'label_comp_id',
-            'label_asym_id', 'label_entity_id', 'label_seq_id',
-            'Cartn_x', 'Cartn_y', 'Cartn_z', 'occupancy', 'B_iso_or_equiv',
-            'pdbx_PDB_ins_code', 'pdbx_formal_charge', 'auth_seq_id',
-            'auth_comp_id', 'auth_asym_id', 'auth_atom_id', 'pdbx_PDB_model_num'
-        }
-        
         # Filter to only known fields that are present
+        known_fields = {f.name for f in cls.__dataclass_fields__.values() if f.init}
         filtered_data = {k: v for k, v in data.items() if k in known_fields}
-        
         return cls(**filtered_data)
     
     def to_dict(self) -> dict[str, Any]:
@@ -88,6 +79,7 @@ class Atom:
         Returns:
             Dictionary representation of the atom
         """
+        # Start with required fields
         result = {
             'type': self.type,
             'id': self.id,
@@ -107,21 +99,16 @@ class Atom:
             'B_iso_or_equiv': self.B_iso_or_equiv,
         }
         
-        # Add optional fields if present
-        if self.pdbx_PDB_ins_code is not None:
-            result['pdbx_PDB_ins_code'] = self.pdbx_PDB_ins_code
-        if self.pdbx_formal_charge is not None:
-            result['pdbx_formal_charge'] = self.pdbx_formal_charge
-        if self.auth_seq_id is not None:
-            result['auth_seq_id'] = self.auth_seq_id
-        if self.auth_comp_id is not None:
-            result['auth_comp_id'] = self.auth_comp_id
-        if self.auth_asym_id is not None:
-            result['auth_asym_id'] = self.auth_asym_id
-        if self.auth_atom_id is not None:
-            result['auth_atom_id'] = self.auth_atom_id
-        if self.pdbx_PDB_model_num is not None:
-            result['pdbx_PDB_model_num'] = self.pdbx_PDB_model_num
+        # Add optional fields if present and not None
+        optional_fields = [
+            'pdbx_PDB_ins_code', 'pdbx_formal_charge', 'auth_seq_id',
+            'auth_comp_id', 'auth_asym_id', 'auth_atom_id', 'pdbx_PDB_model_num'
+        ]
+        
+        for field_name in optional_fields:
+            value = getattr(self, field_name, None)
+            if value is not None:
+                result[field_name] = value
         
         return result
     
@@ -165,9 +152,7 @@ class MmcifData:
         Returns:
             Dictionary with 'atoms' key containing list of atom dicts
         """
-        return {
-            'atoms': [atom.to_dict() for atom in self.atoms]
-        }
+        return {'atoms': [atom.to_dict() for atom in self.atoms]}
     
     @property
     def atom_count(self) -> int:

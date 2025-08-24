@@ -1,7 +1,6 @@
 import unittest
 import ../nim_mmcif/mmcif
 import os
-import sequtils
 
 test "can parse mmcif file":
   let testFile = currentSourcePath().parentDir() / "test.mmcif"

@@ -74,10 +74,6 @@ type
     auth_asym_id*: string
     auth_atom_id*: string
     pdbx_PDB_model_num*: int
-    group_PDB*: string
-    pdbx_sifts_xref_db_acc*: string
-    pdbx_sifts_xref_db_name*: string
-    pdbx_sifts_xref_db_num*: int
     # Convenience aliases for coordinates
     x*: float
     y*: float
@@ -91,29 +87,20 @@ type
     ## Error raised when parsing fails.
 
 
-proc parseIntValue(value: string): int =
-  ## Parse a string value as an integer.
-  if value == "." or value == "?":
-    return 0
-  try:
-    return parseInt(value)
-  except ValueError:
-    return 0
-
-proc parseFloatValue(value: string): float =
-  ## Parse a string value as a float.
-  if value == "." or value == "?":
-    return 0.0
-  try:
-    return parseFloat(value)
-  except ValueError:
-    return 0.0
-
-proc parseStringValue(value: string): string =
-  ## Parse a string value.
-  if value == "." or value == "?":
-    return ""
-  return value
+proc parseValue[T](value: string): T =
+  ## Generic parser for different value types.
+  if value in [".", "?"]:
+    when T is int: return 0
+    elif T is float: return 0.0
+    else: return ""
+  else:
+    when T is int:
+      try: return parseInt(value)
+      except ValueError: return 0
+    elif T is float:
+      try: return parseFloat(value)
+      except ValueError: return 0.0
+    else: return value
 
 
 proc tokenizeLine*(line: string): seq[string] =
@@ -176,50 +163,49 @@ proc parseAtomLine(line: string): Atom =
     case field
     of "group_PDB":
       atom.`type` = token
-      atom.group_PDB = token
     of "id":
-      atom.id = parseIntValue(token)
+      atom.id = parseValue[int](token)
     of "type_symbol":
-      atom.type_symbol = parseStringValue(token)
+      atom.type_symbol = parseValue[string](token)
     of "label_atom_id":
-      atom.label_atom_id = parseStringValue(token)
+      atom.label_atom_id = parseValue[string](token)
     of "label_alt_id":
-      atom.label_alt_id = parseStringValue(token)
+      atom.label_alt_id = parseValue[string](token)
     of "label_comp_id":
-      atom.label_comp_id = parseStringValue(token)
+      atom.label_comp_id = parseValue[string](token)
     of "label_asym_id":
-      atom.label_asym_id = parseStringValue(token)
+      atom.label_asym_id = parseValue[string](token)
     of "label_entity_id":
-      atom.label_entity_id = parseIntValue(token)
+      atom.label_entity_id = parseValue[int](token)
     of "label_seq_id":
-      atom.label_seq_id = parseIntValue(token)
+      atom.label_seq_id = parseValue[int](token)
     of "pdbx_PDB_ins_code":
-      atom.pdbx_PDB_ins_code = parseStringValue(token)
+      atom.pdbx_PDB_ins_code = parseValue[string](token)
     of "Cartn_x":
-      atom.Cartn_x = parseFloatValue(token)
+      atom.Cartn_x = parseValue[float](token)
       atom.x = atom.Cartn_x
     of "Cartn_y":
-      atom.Cartn_y = parseFloatValue(token)
+      atom.Cartn_y = parseValue[float](token)
       atom.y = atom.Cartn_y
     of "Cartn_z":
-      atom.Cartn_z = parseFloatValue(token)
+      atom.Cartn_z = parseValue[float](token)
       atom.z = atom.Cartn_z
     of "occupancy":
-      atom.occupancy = parseFloatValue(token)
+      atom.occupancy = parseValue[float](token)
     of "B_iso_or_equiv":
-      atom.B_iso_or_equiv = parseFloatValue(token)
+      atom.B_iso_or_equiv = parseValue[float](token)
     of "pdbx_formal_charge":
-      atom.pdbx_formal_charge = parseStringValue(token)
+      atom.pdbx_formal_charge = parseValue[string](token)
     of "auth_seq_id":
-      atom.auth_seq_id = parseIntValue(token)
+      atom.auth_seq_id = parseValue[int](token)
     of "auth_comp_id":
-      atom.auth_comp_id = parseStringValue(token)
+      atom.auth_comp_id = parseValue[string](token)
     of "auth_asym_id":
-      atom.auth_asym_id = parseStringValue(token)
+      atom.auth_asym_id = parseValue[string](token)
     of "auth_atom_id":
-      atom.auth_atom_id = parseStringValue(token)
+      atom.auth_atom_id = parseValue[string](token)
     of "pdbx_PDB_model_num":
-      atom.pdbx_PDB_model_num = parseIntValue(token)
+      atom.pdbx_PDB_model_num = parseValue[int](token)
   
   return atom
 
