@@ -77,9 +77,10 @@ jobs:
     
     - name: Install Nim (Windows)
       if: runner.os == 'Windows'
-      uses: jiro4989/setup-nim-action@v1
+      uses: jiro4989/setup-nim-action@v2
       with:
         nim-version: 'stable'
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Verify Nim installation
       run: |
@@ -143,9 +144,10 @@ jobs:
     
     - name: Install Nim (Windows)
       if: runner.os == 'Windows'
-      uses: jiro4989/setup-nim-action@v1
+      uses: jiro4989/setup-nim-action@v2
       with:
         nim-version: 'stable'
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Install build dependencies
       run: |
