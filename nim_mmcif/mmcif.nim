@@ -107,44 +107,33 @@ proc tokenizeLine*(line: string): seq[string] =
   ## Tokenize a line respecting quoted values.
   ## Handles both single and double quotes, and preserves spaces within quotes.
   result = @[]
+  if line.len == 0: return
+  
   var 
     current = ""
     inQuote = false
     quoteChar = '\0'
-    i = 0
   
-  while i < line.len:
-    let ch = line[i]
-    
+  for ch in line:
     if not inQuote:
-      if ch in ['"', '\'']:
-        # Start of quoted value - don't include the quote itself
+      if ch in {'"', '\''}:
         inQuote = true
         quoteChar = ch
       elif ch in Whitespace:
-        # End of token (if any)
         if current.len > 0:
           result.add(current)
           current = ""
       else:
-        # Regular character
         current.add(ch)
     else:
-      # Inside a quote
       if ch == quoteChar:
-        # End of quoted value - don't include the closing quote
         inQuote = false
         quoteChar = '\0'
-        # Add the quoted value (even if empty)
         result.add(current)
         current = ""
       else:
-        # Character inside quote
         current.add(ch)
-    
-    inc(i)
   
-  # Add any remaining token
   if current.len > 0:
     result.add(current)
 

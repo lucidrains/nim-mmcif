@@ -116,37 +116,22 @@ def parse_mmcif(filepath: str | Path, as_dataclass: bool = False) -> dict[str, A
         as_dataclass: If True, return MmcifData dataclass(es) instead of dict(s).
 
     Returns:
-        If as_dataclass is False:
-            - Single file: Dictionary containing parsed mmCIF data with 'atoms' key.
-            - Glob pattern: Dictionary mapping file paths to parsed mmCIF data.
-        If as_dataclass is True:
-            - Single file: MmcifData instance with typed atom access.
-            - Glob pattern: Dictionary mapping file paths to MmcifData instances.
+        Result as dictionary or dataclass.
 
     Raises:
         FileNotFoundError: If the file doesn't exist or no files match the glob pattern.
         RuntimeError: If parsing fails.
     """
-    # Check if the filepath contains glob patterns
     if _has_glob_pattern(filepath):
-        # Expand glob pattern and parse each file
-        matched_files = _expand_glob(filepath)
-        result = {}
-        for file_path in matched_files:
-            try:
-                result[str(file_path)] = mmcif.parse_mmcif(str(file_path))
-            except Exception as e:
-                raise RuntimeError(f"Failed to parse mmCIF file {file_path}: {e}") from e
+        return parse_mmcif_batch(filepath, as_dataclass=as_dataclass)
+    
+    try:
+        result = mmcif.parse_mmcif(_validate_filepath(filepath))
         return dict_to_dataclass(result) if as_dataclass else result
-    else:
-        # Single file case
-        try:
-            result = mmcif.parse_mmcif(_validate_filepath(filepath))
-            return dict_to_dataclass(result) if as_dataclass else result
-        except FileNotFoundError:
-            raise
-        except Exception as e:
-            raise RuntimeError(f"Failed to parse mmCIF file: {e}") from e
+    except FileNotFoundError:
+        raise
+    except Exception as e:
+        raise RuntimeError(f"Failed to parse mmCIF file: {e}") from e
 
 def get_atom_count(filepath: str | Path) -> int:
     """
@@ -217,60 +202,37 @@ def parse_mmcif_batch(filepaths: list[str | Path] | str | Path, as_dataclass: bo
 
     Args:
         filepaths: List of paths to mmCIF files, a single path, or a glob pattern.
-                  If a single string with glob patterns is provided, it will be expanded.
         as_dataclass: If True, return MmcifData dataclass(es) instead of dict(s).
 
     Returns:
-        If as_dataclass is False:
-            - No glob patterns: List of dictionaries, each containing parsed mmCIF data.
-            - With glob patterns: Dictionary mapping file paths to parsed mmCIF data.
-        If as_dataclass is True:
-            - No glob patterns: List of MmcifData instances with typed atom access.
-            - With glob patterns: Dictionary mapping file paths to MmcifData instances.
+        Result list or dictionary.
 
     Raises:
         FileNotFoundError: If any file doesn't exist or no files match glob pattern.
         RuntimeError: If parsing fails for any file.
     """
-    # Handle single filepath (string or Path) that might be a glob
+    if isinstance(filepaths, (str, Path)) and _has_glob_pattern(filepaths):
+        matched_files = _expand_glob(filepaths)
+        result = {str(p): mmcif.parse_mmcif(str(p)) for p in matched_files}
+        return dict_to_dataclass(result) if as_dataclass else result
+
     if isinstance(filepaths, (str, Path)):
-        if _has_glob_pattern(filepaths):
-            # Expand glob and return as dict
-            matched_files = _expand_glob(filepaths)
-            result = {}
-            for file_path in matched_files:
-                try:
-                    result[str(file_path)] = mmcif.parse_mmcif(str(file_path))
-                except Exception as e:
-                    raise RuntimeError(f"Failed to parse mmCIF file {file_path}: {e}") from e
-            return dict_to_dataclass(result) if as_dataclass else result
-        else:
-            # Single file, treat as batch of one
-            filepaths = [filepaths]
+        filepaths = [filepaths]
     
-    # Check if any filepath in the list contains glob patterns
     expanded_paths = []
     has_any_glob = False
     
     for filepath in filepaths:
         if _has_glob_pattern(filepath):
             has_any_glob = True
-            matched = _expand_glob(filepath)
-            expanded_paths.extend(matched)
+            expanded_paths.extend(_expand_glob(filepath))
         else:
             expanded_paths.append(Path(_validate_filepath(filepath)))
     
-    # If glob patterns were used, return dict format
     if has_any_glob:
-        result = {}
-        for path in expanded_paths:
-            try:
-                result[str(path)] = mmcif.parse_mmcif(str(path))
-            except Exception as e:
-                raise RuntimeError(f"Failed to parse mmCIF file {path}: {e}") from e
+        result = {str(p): mmcif.parse_mmcif(str(p)) for p in expanded_paths}
         return dict_to_dataclass(result) if as_dataclass else result
     else:
-        # No glob patterns, use original batch processing
         try:
             str_paths = [str(p) for p in expanded_paths]
             result = mmcif.parse_mmcif_batch(str_paths)
